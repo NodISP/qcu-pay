@@ -1,0 +1,10 @@
+{
+  "name": "qcu-pay",
+  "version": "1.0.0",
+  "dependencies": {
+    "express": "^4.18.2",
+    "mongodb": "^5.0.0",
+    "bcrypt": "^5.1.0",
+    "cors": "^2.8.5"
+  }
+}
