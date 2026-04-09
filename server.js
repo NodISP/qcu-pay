@@ -1,3 +1,8 @@
+// For Vercel serverless
+if (process.env.NODE_ENV === 'production') {
+    console.log('Running on Vercel (production)');
+}
+
 const express = require('express');
 const { MongoClient, ObjectId } = require('mongodb');
 const bcrypt = require('bcrypt');
@@ -133,9 +138,18 @@ app.put('/api/profile/:userId', async (req, res) => {
     }
 });
 
+// For Vercel serverless
 connectDB().then(() => {
+    console.log('✅ Connected to MongoDB successfully!');
+});
+
+// Export the app for Vercel
+module.exports = app;
+
+// For local development
+if (process.env.NODE_ENV !== 'production') {
     app.listen(5000, () => {
         console.log('🚀 Server running on http://localhost:5000');
         console.log('   Email: john@example.com, Password: password123');
     });
-});
+}
