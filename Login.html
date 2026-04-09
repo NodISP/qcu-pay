@@ -1,0 +1,557 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>QCU PAY Login</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', sans-serif;
+        }
+
+        body {
+            height: 100vh;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+        }
+
+        .top-left, .top-right {
+            position: absolute;
+            color: white;
+            font-size: 14px;
+            z-index: 5;
+            background: rgba(0,0,0,0.5);
+            padding: 8px 15px;
+            border-radius: 20px;
+            backdrop-filter: blur(5px);
+        }
+
+        .top-left { top: 20px; left: 30px; }
+        .top-right { top: 20px; right: 30px; }
+
+        .login-container {
+            position: relative;
+            z-index: 2;
+            width: min(420px, 95vw);
+            max-width: 420px;
+            padding: 36px 30px;
+            border-radius: 20px;
+            background: rgba(10, 20, 35, 0.85);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 18px 40px rgba(0, 0, 0, 0.45);
+            text-align: center;
+            color: #fff;
+        }
+
+        .login-container h3 {
+            font-weight: 300;
+            margin-bottom: 6px;
+            color: #f2c94c;
+        }
+
+        .login-container h1 {
+            margin-bottom: 22px;
+            font-size: 2.2rem;
+            letter-spacing: 0.7px;
+            text-transform: uppercase;
+            color: #ffd700;
+        }
+
+        .input-group {
+            margin-bottom: 14px;
+            position: relative;
+        }
+
+        .input-group input {
+            width: 100%;
+            padding: 18px 14px 10px;
+            border-radius: 12px;
+            border: 1px solid rgba(255,255,255,0.25);
+            background: rgba(255,255,255,0.1);
+            color: #fff;
+            outline: none;
+            font-size: 14px;
+        }
+
+        .input-group input:focus {
+            border-color: #00bcd4;
+            background: rgba(255, 255, 255, 0.18);
+        }
+
+        .input-group label {
+            position: absolute;
+            left: 14px;
+            top: 14px;
+            color: rgba(255,255,255,0.7);
+            font-size: 14px;
+            pointer-events: none;
+            transition: 0.3s ease;
+        }
+
+        .input-group input:focus + label,
+        .input-group input:not(:placeholder-shown) + label {
+            top: -10px;
+            font-size: 12px;
+            color: #fff;
+            background: rgba(10, 20, 35, 0.9);
+            padding: 0 5px;
+            border-radius: 6px;
+        }
+
+        .toggle-password {
+            position: absolute;
+            right: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #fff;
+            font-weight: 700;
+            cursor: pointer;
+            user-select: none;
+            font-size: 12px;
+            background: rgba(0,0,0,0.5);
+            padding: 4px 8px;
+            border-radius: 8px;
+        }
+
+        .login-btn {
+            width: 100%;
+            padding: 12px;
+            border: none;
+            border-radius: 10px;
+            background: #00bcd4;
+            color: #fff;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-size: 16px;
+        }
+
+        .login-btn:hover {
+            background: #00a0c8;
+            transform: translateY(-2px);
+        }
+
+        .login-btn:disabled {
+            background: #666;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .links {
+            margin-top: 12px;
+            font-size: 13px;
+        }
+
+        .links a {
+            color: #3ee2ff;
+            text-decoration: none;
+            display: inline-block;
+            margin: 0 6px;
+        }
+
+        .links a:hover {
+            text-decoration: underline;
+        }
+
+        .message {
+            min-height: 22px;
+            margin-bottom: 12px;
+            font-size: 13px;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        .message.success { color: #c8ffd7; }
+        .message.error { color: #ffb3b3; }
+        .message.loading { color: #ffd700; }
+
+        /* Animated background circles */
+        .bg-circles {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            z-index: 0;
+        }
+
+        .bg-circles div {
+            position: absolute;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.05);
+            animation: float 20s infinite;
+        }
+
+        @keyframes float {
+            0% { transform: translateY(0) rotate(0deg); }
+            50% { transform: translateY(-20px) rotate(180deg); }
+            100% { transform: translateY(0) rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="bg-circles">
+        <div style="width: 300px; height: 300px; top: -100px; left: -100px;"></div>
+        <div style="width: 500px; height: 500px; bottom: -200px; right: -100px; animation-duration: 25s;"></div>
+        <div style="width: 200px; height: 200px; top: 50%; left: 10%; animation-duration: 15s;"></div>
+        <div style="width: 150px; height: 150px; bottom: 20%; right: 15%; animation-duration: 18s;"></div>
+    </div>
+
+    <div class="top-left" id="currentDate"></div>
+    <div class="top-right" id="clock"></div>
+
+    <!-- LOGIN PANEL -->
+    <div class="login-container" id="loginBox">
+        <h3>Welcome to</h3>
+        <h1>QCU PAY</h1>
+        <div class="message" id="message"></div>
+        <form id="loginForm">
+            <div class="input-group">
+                <input type="email" id="email" placeholder=" " required>
+                <label for="email">Email</label>
+            </div>
+            <div class="input-group">
+                <input type="password" id="password" placeholder=" " required>
+                <label for="password">Password</label>
+                <span class="toggle-password" data-target="password">Show</span>
+            </div>
+            <button class="login-btn" type="submit">LOG IN</button>
+        </form>
+        <div class="links">
+            <a href="#" id="showForgot">Forgot password?</a>
+            <a href="#" id="showRegister">New user? Register</a>
+        </div>
+    </div>
+
+    <!-- REGISTER PANEL -->
+    <div class="login-container hidden" id="registerBox">
+        <h3>Create an account</h3>
+        <h1>QCU PAY</h1>
+        <div class="message" id="registerMessage"></div>
+        <form id="registerForm">
+            <div class="input-group">
+                <input type="text" id="registerUsername" placeholder=" " required>
+                <label for="registerUsername">Username</label>
+            </div>
+            <div class="input-group">
+                <input type="email" id="registerEmail" placeholder=" " required>
+                <label for="registerEmail">Email</label>
+            </div>
+            <div class="input-group">
+                <input type="password" id="registerPassword" placeholder=" " required>
+                <label for="registerPassword">Password</label>
+                <span class="toggle-password" data-target="registerPassword">Show</span>
+            </div>
+            <div class="input-group">
+                <input type="password" id="registerConfirm" placeholder=" " required>
+                <label for="registerConfirm">Confirm Password</label>
+                <span class="toggle-password" data-target="registerConfirm">Show</span>
+            </div>
+            <button class="login-btn" type="submit">REGISTER</button>
+        </form>
+        <div class="links">
+            <a href="#" id="backToLoginFromRegister">Already have an account? Log in</a>
+        </div>
+    </div>
+
+    <!-- FORGOT PASSWORD PANEL -->
+    <div class="login-container hidden" id="forgotBox">
+        <h3>Reset password</h3>
+        <h1>QCU PAY</h1>
+        <div class="message" id="forgotMessage"></div>
+        <form id="forgotForm">
+            <div class="input-group">
+                <input type="email" id="forgotEmail" placeholder=" " required>
+                <label for="forgotEmail">Email</label>
+            </div>
+            <button class="login-btn" type="submit">SEND RESET LINK</button>
+        </form>
+        <div class="links">
+            <a href="#" id="backToLoginFromForgot">Back to Log in</a>
+        </div>
+    </div>
+
+    <script>
+        // API URL - change this to your deployed backend URL when ready
+        const API_URL = 'http://localhost:5000/api';
+
+        document.addEventListener("DOMContentLoaded", function () {
+            // Check if already logged in
+            const savedUserId = localStorage.getItem('userId');
+            if (savedUserId) {
+                    window.location.href = "index.html";
+                    return;
+            }
+
+            // Date and time functions
+            function updateDateTime() {
+                const now = new Date();
+                const days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+                const months = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+                
+                const formattedDate = `${days[now.getDay()]}, ${months[now.getMonth()]} ${now.getDate()}, ${now.getFullYear()}`;
+                let hours = now.getHours();
+                const ampm = hours >= 12 ? "PM" : "AM";
+                hours = hours % 12 || 12;
+                const minutes = String(now.getMinutes()).padStart(2, '0');
+                const seconds = String(now.getSeconds()).padStart(2, '0');
+                const formattedTime = `${hours}:${minutes}:${seconds} ${ampm}`;
+                
+                const dateElement = document.getElementById("currentDate");
+                const clockElement = document.getElementById("clock");
+                if (dateElement) dateElement.textContent = formattedDate;
+                if (clockElement) clockElement.textContent = formattedTime;
+            }
+
+            function setMessage(element, message, type) {
+                if (!element) return;
+                element.textContent = message;
+                element.classList.remove("success", "error", "loading");
+                if (type) element.classList.add(type);
+            }
+
+            // DOM elements
+            const loginForm = document.getElementById("loginForm");
+            const emailInput = document.getElementById("email");
+            const passwordInput = document.getElementById("password");
+            const messageDiv = document.getElementById("message");
+            const loginBtn = loginForm?.querySelector('button[type="submit"]');
+
+            const registerForm = document.getElementById("registerForm");
+            const registerUsername = document.getElementById("registerUsername");
+            const registerEmail = document.getElementById("registerEmail");
+            const registerPassword = document.getElementById("registerPassword");
+            const registerConfirm = document.getElementById("registerConfirm");
+            const registerMessage = document.getElementById("registerMessage");
+            const registerBtn = registerForm?.querySelector('button[type="submit"]');
+
+            const forgotForm = document.getElementById("forgotForm");
+            const forgotEmail = document.getElementById("forgotEmail");
+            const forgotMessage = document.getElementById("forgotMessage");
+
+            // LOGIN HANDLER
+            if (loginForm) {
+                loginForm.addEventListener("submit", async function (e) {
+                    e.preventDefault();
+                    
+                    const email = emailInput.value.trim();
+                    const password = passwordInput.value;
+                    
+                    if (!email || !password) {
+                        setMessage(messageDiv, "Please enter both email and password.", "error");
+                        return;
+                    }
+                    
+                    if (loginBtn) {
+                        loginBtn.disabled = true;
+                        loginBtn.textContent = "LOGGING IN...";
+                    }
+                    setMessage(messageDiv, "Authenticating...", "loading");
+                    
+                    try {
+                        const response = await fetch(`${API_URL}/login`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ email, password })
+                        });
+                        
+                        const data = await response.json();
+                        
+                        if (response.ok && data.success) {
+console.log("Login response data:", data);
+console.log("User object:", data.user);
+console.log("User ID:", data.user._id);
+
+// Convert ObjectId to string if needed
+const userId = data.user._id.toString ? data.user._id.toString() : data.user._id;
+
+localStorage.setItem('userId', userId);
+localStorage.setItem('userEmail', data.user.email);
+localStorage.setItem('username', data.user.username);
+localStorage.setItem('userBalance', data.user.balance);
+
+console.log("Saved userId as string:", userId);
+alert("Saved! Your userId is: " + userId);
+    
+    setMessage(messageDiv, "Login successful! Redirecting...", "success");
+                            
+                            setTimeout(() => {
+                                window.location.href = "index.html";
+                            }, 1000);
+                        } else {
+                            setMessage(messageDiv, data.error || "Login failed. Please try again.", "error");
+                            if (loginBtn) {
+                                loginBtn.disabled = false;
+                                loginBtn.textContent = "LOG IN";
+                            }
+                        }
+                    } catch (error) {
+                        console.error("Login error:", error);
+                        setMessage(messageDiv, "Cannot connect to server. Make sure the backend is running on port 5000", "error");
+                        if (loginBtn) {
+                            loginBtn.disabled = false;
+                            loginBtn.textContent = "LOG IN";
+                        }
+                    }
+                });
+            }
+            
+            // REGISTER HANDLER
+            if (registerForm) {
+                registerForm.addEventListener("submit", async function (e) {
+                    e.preventDefault();
+                    
+                    const username = registerUsername.value.trim();
+                    const email = registerEmail.value.trim();
+                    const password = registerPassword.value;
+                    const confirm = registerConfirm.value;
+                    
+                    if (!username || !email || !password || !confirm) {
+                        setMessage(registerMessage, "Please fill all fields.", "error");
+                        return;
+                    }
+                    
+                    if (password.length < 6) {
+                        setMessage(registerMessage, "Password must be at least 6 characters.", "error");
+                        return;
+                    }
+                    
+                    if (password !== confirm) {
+                        setMessage(registerMessage, "Passwords do not match.", "error");
+                        return;
+                    }
+                    
+                    if (registerBtn) {
+                        registerBtn.disabled = true;
+                        registerBtn.textContent = "CREATING ACCOUNT...";
+                    }
+                    setMessage(registerMessage, "Creating your account...", "loading");
+                    
+                    try {
+                        const response = await fetch(`${API_URL}/register`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ username, email, password })
+                        });
+                        
+                        const data = await response.json();
+                        
+                        if (response.ok && data.success) {
+                            setMessage(registerMessage, "Registration successful! Please log in.", "success");
+                            registerForm.reset();
+                            
+                            setTimeout(() => {
+                                showLoginPanel();
+                                setMessage(messageDiv, "Account created! Please log in.", "success");
+                            }, 1500);
+                        } else {
+                            setMessage(registerMessage, data.error || "Registration failed.", "error");
+                        }
+                    } catch (error) {
+                        console.error("Registration error:", error);
+                        setMessage(registerMessage, "Cannot connect to server. Make sure the backend is running.", "error");
+                    } finally {
+                        if (registerBtn) {
+                            registerBtn.disabled = false;
+                            registerBtn.textContent = "REGISTER";
+                        }
+                    }
+                });
+            }
+            
+            // FORGOT PASSWORD HANDLER
+            if (forgotForm) {
+                forgotForm.addEventListener("submit", function (e) {
+                    e.preventDefault();
+                    const email = forgotEmail.value.trim();
+                    
+                    if (!email) {
+                        setMessage(forgotMessage, "Please enter your email.", "error");
+                        return;
+                    }
+                    
+                    setMessage(forgotMessage, `If an account exists for ${email}, a reset link has been sent.`, "success");
+                    forgotForm.reset();
+                    
+                    setTimeout(() => {
+                        showLoginPanel();
+                    }, 2000);
+                });
+            }
+            
+            // Toggle password visibility
+            document.querySelectorAll('.toggle-password').forEach(toggle => {
+                toggle.addEventListener('click', () => {
+                    const targetId = toggle.getAttribute('data-target');
+                    const targetInput = document.getElementById(targetId);
+                    if (targetInput) {
+                        const isPassword = targetInput.type === 'password';
+                        targetInput.type = isPassword ? 'text' : 'password';
+                        toggle.textContent = isPassword ? 'Hide' : 'Show';
+                    }
+                });
+            });
+            
+            // Panel navigation functions
+            function showLoginPanel() {
+                const loginBox = document.getElementById('loginBox');
+                const registerBox = document.getElementById('registerBox');
+                const forgotBox = document.getElementById('forgotBox');
+                if (loginBox) loginBox.classList.remove('hidden');
+                if (registerBox) registerBox.classList.add('hidden');
+                if (forgotBox) forgotBox.classList.add('hidden');
+                setMessage(messageDiv, '', null);
+                setMessage(registerMessage, '', null);
+                setMessage(forgotMessage, '', null);
+            }
+            
+            function showRegisterPanel() {
+                const loginBox = document.getElementById('loginBox');
+                const registerBox = document.getElementById('registerBox');
+                const forgotBox = document.getElementById('forgotBox');
+                if (loginBox) loginBox.classList.add('hidden');
+                if (registerBox) registerBox.classList.remove('hidden');
+                if (forgotBox) forgotBox.classList.add('hidden');
+                setMessage(messageDiv, '', null);
+                setMessage(registerMessage, '', null);
+                setMessage(forgotMessage, '', null);
+            }
+            
+            function showForgotPanel() {
+                const loginBox = document.getElementById('loginBox');
+                const registerBox = document.getElementById('registerBox');
+                const forgotBox = document.getElementById('forgotBox');
+                if (loginBox) loginBox.classList.add('hidden');
+                if (registerBox) registerBox.classList.add('hidden');
+                if (forgotBox) forgotBox.classList.remove('hidden');
+                setMessage(messageDiv, '', null);
+                setMessage(registerMessage, '', null);
+                setMessage(forgotMessage, '', null);
+            }
+            
+            const showRegisterLink = document.getElementById('showRegister');
+            const backToLoginFromRegister = document.getElementById('backToLoginFromRegister');
+            const showForgotLink = document.getElementById('showForgot');
+            const backToLoginFromForgot = document.getElementById('backToLoginFromForgot');
+            
+            if (showRegisterLink) showRegisterLink.addEventListener('click', (e) => { e.preventDefault(); showRegisterPanel(); });
+            if (backToLoginFromRegister) backToLoginFromRegister.addEventListener('click', (e) => { e.preventDefault(); showLoginPanel(); });
+            if (showForgotLink) showForgotLink.addEventListener('click', (e) => { e.preventDefault(); showForgotPanel(); });
+            if (backToLoginFromForgot) backToLoginFromForgot.addEventListener('click', (e) => { e.preventDefault(); showLoginPanel(); });
+            
+            // Start clock
+            updateDateTime();
+            setInterval(updateDateTime, 1000);
+        });
+    </script>
+</body>
+</html>
