@@ -337,6 +337,78 @@ app.put('/api/profile/:userId', async (req, res) => {
     }
 });
 
+// ============ CHECK DAILY SPENDING ============
+app.get('/api/daily-spending/:userId', async (req, res) => {
+    try {
+        await connectDB();
+        const today = new Date().toISOString().split('T')[0];
+        
+        const todaysTransactions = await transactionsCollection.find({
+            userId: req.params.userId,
+            date: today,
+            type: 'sent'
+        }).toArray();
+        
+        const totalSpent = todaysTransactions.reduce((sum, t) => sum + t.amount, 0);
+        
+        res.json({ totalSpent, date: today, transactionCount: todaysTransactions.length });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// ============ GET NOTIFICATIONS ============
+app.get('/api/notifications/:userId', async (req, res) => {
+    try {
+        await connectDB();
+        const today = new Date().toISOString().split('T')[0];
+        
+        const todaysSpending = await transactionsCollection.find({
+            userId: req.params.userId,
+            date: today,
+            type: 'sent'
+        }).toArray();
+        
+        const totalSpent = todaysSpending.reduce((sum, t) => sum + t.amount, 0);
+        
+        let notifications = [];
+        
+        // Daily spending alerts
+        if (totalSpent > 1000) {
+            notifications.push({
+                type: 'warning',
+                title: '⚠️ High Spending Alert',
+                message: `You've spent ₱${totalSpent.toLocaleString()} today!`,
+                time: new Date().toLocaleTimeString()
+            });
+        }
+        
+        if (totalSpent > 2000) {
+            notifications.push({
+                type: 'critical',
+                title: '🔴 Critical Spending Alert',
+                message: `You've exceeded ₱2,000 in spending today!`,
+                time: new Date().toLocaleTimeString()
+            });
+        }
+        
+        // Low balance alert
+        const user = await usersCollection.findOne({ _id: new ObjectId(req.params.userId) });
+        if (user && user.balance < 500) {
+            notifications.push({
+                type: 'warning',
+                title: '⚠️ Low Balance Alert',
+                message: `Your balance is only ₱${user.balance.toLocaleString()}!`,
+                time: new Date().toLocaleTimeString()
+            });
+        }
+        
+        res.json(notifications);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
 // For Vercel serverless
 module.exports = app;
 
