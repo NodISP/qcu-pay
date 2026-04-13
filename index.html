@@ -2572,6 +2572,95 @@ input:checked + .toggle-slider:before {
     background: #667eea;
     color: white;
 }
+    /* Item Selection Modal */
+.items-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10003;
+}
+
+.items-modal-content {
+    background: white;
+    border-radius: 12px;
+    width: 90%;
+    max-width: 500px;
+    max-height: 80vh;
+    overflow: hidden;
+    animation: modalSlideIn 0.2s ease;
+    display: flex;
+    flex-direction: column;
+}
+
+.items-modal-header {
+    background: #667eea;
+    color: white;
+    padding: 15px 20px;
+    font-weight: bold;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.items-modal-close {
+    background: none;
+    border: none;
+    color: white;
+    font-size: 24px;
+    cursor: pointer;
+}
+
+.items-modal-body {
+    padding: 20px;
+    overflow-y: auto;
+    flex: 1;
+}
+
+.item-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.item-btn {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px;
+    background: #f8f9fa;
+    border: 1px solid #e0e0e0;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.item-btn:hover {
+    background: #e3f2fd;
+    transform: translateX(5px);
+    border-color: #667eea;
+}
+
+.item-name {
+    font-weight: bold;
+    color: #333;
+}
+
+.item-price {
+    color: #667eea;
+    font-weight: bold;
+}
+
+.items-modal-footer {
+    padding: 15px 20px;
+    border-top: 1px solid #eee;
+    text-align: center;
+}
 </style>
 </head>
 
@@ -2705,17 +2794,10 @@ input:checked + .toggle-slider:before {
                         </div>
                     </div>
                 </div>
-                <div class="categories-section">
-                    <h2>Expense Categories</h2>
+               <div class="categories-section">
+                    <h2>Student Bills</h2>
+                    <p style="color: #666; margin-bottom: 15px; font-size: 14px;">Click any category to view available items</p>
                     <div class="categories-grid">
-                        <button class="category-btn">Category 1</button>
-                        <button class="category-btn">Category 2</button>
-                        <button class="category-btn">Category 3</button>
-                        <button class="category-btn">Category 4</button>
-                        <button class="category-btn">Category 5</button>
-                        <button class="category-btn">Category 6</button>
-                        <button class="category-btn">Category 7</button>
-                        <button class="category-btn">Category 8</button>
                     </div>
                 </div>
                 <div class="back-button">
@@ -3728,6 +3810,121 @@ const studentBills = [
     { name: "🚌 School Bus", category: "Transportation" },
     { name: "💻 Laptop/Tablet", category: "Device" }
 ];
+    // ========== ITEMS FOR EACH CATEGORY ==========
+const categoryItems = {
+    "Tuition": [
+        { name: "📚 1st Semester Tuition", price: 15000 },
+        { name: "📚 2nd Semester Tuition", price: 15000 },
+        { name: "📚 Summer Class Tuition", price: 8000 },
+        { name: "📚 Late Registration Fee", price: 500 },
+        { name: "📚 Cross-Enrollment Fee", price: 1000 }
+    ],
+    "School Misc": [
+        { name: "🏫 Student Council Fee", price: 200 },
+        { name: "🏫 Library Fee", price: 300 },
+        { name: "🏫 Computer Lab Fee", price: 500 },
+        { name: "🏫 Athletic Fee", price: 400 },
+        { name: "🏫 Medical/Dental Fee", price: 250 }
+    ],
+    "Books": [
+        { name: "📖 Calculus 101 Book", price: 850 },
+        { name: "📖 Basics of Programming", price: 750 },
+        { name: "📖 English Literature", price: 600 },
+        { name: "📖 Physics for Engineers", price: 900 },
+        { name: "📖 History of the Philippines", price: 550 }
+    ],
+    "Graduation": [
+        { name: "🎓 Graduation Fee", price: 1500 },
+        { name: "🎓 Toga & Sablay Rental", price: 800 },
+        { name: "🎓 Yearbook", price: 1200 },
+        { name: "🎓 Alumni Fee", price: 500 },
+        { name: "🎓 Graduation Picture Package", price: 1000 }
+    ],
+    "Dormitory": [
+        { name: "🏢 Monthly Dorm Rent", price: 3500 },
+        { name: "🏢 Dorm Deposit", price: 2000 },
+        { name: "🏢 Electricity Bill", price: 800 },
+        { name: "🏢 Water Bill", price: 300 },
+        { name: "🏢 WiFi Bill", price: 500 }
+    ],
+    "Meal Plan": [
+        { name: "🍽️ Weekly Meal Plan", price: 1500 },
+        { name: "🍽️ Monthly Meal Plan", price: 5000 },
+        { name: "🍽️ 5-Day Meal Pass", price: 800 },
+        { name: "🍽️ Snack Pass", price: 300 },
+        { name: "🍽️ Coffee Shop Credits", price: 500 }
+    ],
+    "Transportation": [
+        { name: "🚌 School Bus Monthly", price: 1200 },
+        { name: "🚌 Single Trip Ticket", price: 50 },
+        { name: "🚌 10-Trip Pass", price: 450 },
+        { name: "🚌 Jeepney Fare Load", price: 100 },
+        { name: "🚌 Train Fare Load", price: 200 }
+    ],
+    "Device": [
+        { name: "💻 Laptop Rental (Monthly)", price: 2000 },
+        { name: "💻 Tablet Rental (Monthly)", price: 1500 },
+        { name: "💻 Printer Access", price: 300 },
+        { name: "💻 USB Drive", price: 250 },
+        { name: "💻 Headphones", price: 400 }
+    ]
+};
+
+// ========== SHOW ITEMS MODAL ==========
+function showItemsModal(category, categoryName) {
+    const items = categoryItems[category];
+    if (!items) return;
+    
+    const existingModal = document.querySelector('.items-modal');
+    if (existingModal) existingModal.remove();
+    
+    const modal = document.createElement('div');
+    modal.className = 'items-modal';
+    modal.innerHTML = `
+        <div class="items-modal-content">
+            <div class="items-modal-header">
+                <span>📦 ${categoryName}</span>
+                <button class="items-modal-close">&times;</button>
+            </div>
+            <div class="items-modal-body">
+                <div class="item-list">
+                    ${items.map(item => `
+                        <div class="item-btn" data-price="${item.price}" data-name="${item.name}">
+                            <span class="item-name">${item.name}</span>
+                            <span class="item-price">₱${item.price.toLocaleString()}</span>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+            <div class="items-modal-footer">
+                <small>Click any item to purchase</small>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+    
+    modal.querySelector('.items-modal-close').onclick = () => modal.remove();
+    
+    modal.querySelectorAll('.item-btn').forEach(btn => {
+        btn.addEventListener('click', async () => {
+            const price = parseFloat(btn.dataset.price);
+            const itemName = btn.dataset.name;
+            modal.remove();
+            
+            // Confirm purchase
+            showConfirmDialog(
+                `Purchase ${itemName} for ₱${price.toLocaleString()}?`,
+                async () => {
+                    await payBill(category, price, itemName);
+                },
+                () => {
+                    showToast('Purchase cancelled', 'info');
+                }
+            );
+        });
+    });
+}
 // ========== CONFIRMATION MODAL ==========
 function showConfirmDialog(message, onConfirm, onCancel) {
     // Remove existing modal
@@ -4069,14 +4266,8 @@ async function setupCategoryButtons() {
             const btn = document.createElement('button');
             btn.className = 'category-btn';
             btn.textContent = bill.name;
-            btn.addEventListener('click', async () => {
-                const amountInput = await showPrompt(`Enter amount to pay for ${bill.name}:`, "500");
-                const amount = parseFloat(amountInput);
-                if (amount && !isNaN(amount)) {
-                   let reference = await showPrompt("Enter reference number (optional):", "STU-" + Math.floor(Math.random() * 10000));
-                    if (!reference) reference = "STU-" + Math.floor(Math.random() * 10000);
-                    await payBill(bill.category, amount, reference);
-                }
+            btn.addEventListener('click', () => {
+                showItemsModal(bill.category, bill.name);
             });
             categoriesGrid.appendChild(btn);
         });
