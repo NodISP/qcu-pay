@@ -4631,6 +4631,19 @@ async function updateSpendingChart() {
         // Filter only sent transactions (spending)
         const spending = transactions.filter(t => t.type === 'sent');
         
+        // If no spending, show message
+        if (spending.length === 0) {
+            const ctx = document.getElementById('spendingChart')?.getContext('2d');
+            if (ctx) {
+                if (spendingChart) spendingChart.destroy();
+                ctx.clearRect(0, 0, 200, 200);
+                ctx.font = '12px Arial';
+                ctx.fillStyle = '#999';
+                ctx.fillText('No spending yet', 60, 100);
+            }
+            return;
+        }
+        
         // Group by category
         const categoryTotals = {};
         spending.forEach(t => {
@@ -4641,7 +4654,6 @@ async function updateSpendingChart() {
         const categories = Object.keys(categoryTotals);
         const amounts = categories.map(c => categoryTotals[c]);
         
-        // Colors for different categories
         const colors = ['#667eea', '#f093fb', '#4facfe', '#43e97b', '#fa709a', '#30cfd0', '#a8edea', '#ff9a9e', '#f59e0b', '#ef4444'];
         
         const ctx = document.getElementById('spendingChart')?.getContext('2d');
