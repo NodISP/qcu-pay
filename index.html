@@ -3003,6 +3003,7 @@ input:checked + .toggle-slider:before {
                             </div>
                         </div>
                     </div>
+                    <button id="saveSettingsBtn" class="settings-action-btn" style="width:100%; margin-top:20px;">💾 Save All Settings</button>
                 </div>
                 <div class="settings-back-button">
                     <button class="back-to-dashboard" id="backFromSettingsBtn">← Back to Dashboard</button>
@@ -3212,276 +3213,226 @@ input:checked + .toggle-slider:before {
 </div>
 
 <script>
-// FORCE CHECK - put this at the VERY TOP of your dashboard script
-console.log("=== DASHBOARD LOADED ===");
-console.log("All localStorage items:");
-for (let i = 0; i < localStorage.length; i++) {
-    const key = localStorage.key(i);
-    console.log(key + " = " + localStorage.getItem(key));
-}
-
-// If no userId, show alert and redirect
-if (!localStorage.getItem('userId')) {
-    alert("No userId found! Redirecting to login. Please login again.");
-    window.location.href = "Login.html";
-}
-   // ========== DATABASE CONFIGURATION ==========
+// ========== CONFIGURATION ==========
 const API_URL = '/api';
-
-// Get user data from localStorage
-let currentUserId = localStorage.getItem('userId');
-let currentUserEmail = localStorage.getItem('userEmail');
-let currentUsername = localStorage.getItem('username');
-
-// DEBUG - show what we have
-console.log("CurrentUserId from localStorage:", currentUserId);
-console.log("CurrentUserEmail:", currentUserEmail);
+const currentUserId = localStorage.getItem('userId');
+const currentUserEmail = localStorage.getItem('userEmail');
 
 // Redirect to login if not authenticated
-if (!currentUserId || currentUserId === 'undefined' || currentUserId === 'null') {
-    alert("No user session found. Please login again.");
+if (!currentUserId) {
     window.location.href = "Login.html";
 }
-
-// ========== GLOBAL VARIABLES ==========
-let selectedRecipient = null;
-let currentBalance = 0;
-let allTransactions = [];
-let sampleEvents = [];
 
 // ========== HELPER FUNCTIONS ==========
 function formatCurrency(amount) {
     return `₱${parseFloat(amount).toLocaleString(undefined, {minimumFractionDigits: 2})}`;
 }
 
-// ========== API CALLS ==========
-async function fetchBalance() {
+// ========== LOAD DASHBOARD DATA ==========
+async function loadDashboard() {
     try {
-        const response = await fetch(`${API_URL}/balance/${currentUserId}`);
-        const data = await response.json();
-        if (response.ok) {
-            currentBalance = data.balance;
-            const formattedBalance = formatCurrency(data.balance);
-            
-            // Update all balance displays
-            document.querySelectorAll('#currentBalance, .profile-balance-amount, .remaining-balance .amount').forEach(el => {
-                if (el) el.textContent = formattedBalance;
+        const balanceRes = await fetch(`${API_URL}/balance/${currentUserId}`);
+        const balanceData = await balanceRes.json();
+        
+        const balanceAmount = formatCurrency(balanceData.balance);
+        document.querySelectorAll('.balance .box:first-child .amount, .profile-balance-amount, .remaining-balance .amount').forEach(el => {
+            if (el) el.textContent = balanceAmount;
+        });
+        
+        const greetingEl = document.querySelector('.greeting h2');
+        if (greetingEl) greetingEl.textContent = `Good day, ${balanceData.username || 'Student'}!`;
+        
+        const savings = balanceData.balance * 0.3;
+        const savingsEl = document.querySelector('.savings .amount, #savingsAmount');
+        if (savingsEl) savingsEl.textContent = formatCurrency(savings);
+        
+        const transactionsRes = await fetch(`${API_URL}/transactions/${currentUserId}`);
+        const transactions = await transactionsRes.json();
+        
+        const activityDiv = document.querySelector('.activity');
+        if (activityDiv && transactions.length) {
+            const recent = transactions.slice(0, 5);
+            let html = '<h3>📊 Recent Activity</h3><div style="font-size: 13px;">';
+            recent.forEach(t => {
+                const amount = t.type === 'sent' ? `-₱${t.amount.toLocaleString()}` : `+₱${t.amount.toLocaleString()}`;
+                const color = t.type === 'sent' ? '#dc3545' : '#28a745';
+                html += `<div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #eee;">
+                            <span>${t.otherParty || 'Transaction'}</span>
+                            <span style="color: ${color};">${amount}</span>
+                         </div>`;
             });
-            
-            // Update greeting with username
-            const greetingEl = document.querySelector('.greeting h2');
-            if (greetingEl) greetingEl.textContent = `Good day, ${data.username || 'Student'}!`;
-            
-            // Update savings (30% of balance for demo)
-            const savings = data.balance * 0.3;
-            const savingsEl = document.querySelector('.savings .amount, #savingsAmount');
-            if (savingsEl) savingsEl.textContent = formatCurrency(savings);
-            
-            return data.balance;
+            html += '</div>';
+            activityDiv.innerHTML = html;
         }
+        
+        const profileRes = await fetch(`${API_URL}/profile/${currentUserId}`);
+        const user = await profileRes.json();
+        
+        const profileRows = document.querySelectorAll('.profile-info-row');
+        profileRows.forEach(row => {
+            const label = row.querySelector('.profile-info-label')?.textContent;
+            const valueSpan = row.querySelector('.profile-info-value');
+            if (label === 'Full Name:' && valueSpan) valueSpan.textContent = user.profile?.fullName || user.username;
+            if (label === 'Nationality:' && valueSpan) valueSpan.textContent = user.profile?.nationality || 'Filipino';
+            if (label === 'Address:' && valueSpan) valueSpan.textContent = user.profile?.address || 'Not set';
+            if (label === 'Class:' && valueSpan) valueSpan.textContent = user.profile?.class || 'Not set';
+            if (label === 'Birthday:' && valueSpan) valueSpan.textContent = user.profile?.birthday || 'Not set';
+            if (label === 'Student ID:' && valueSpan) valueSpan.textContent = user.profile?.studentId || 'Not set';
+        });
+        
+        const emailSpan = document.querySelector('.profile-detail-value');
+        if (emailSpan) emailSpan.textContent = user.email;
+        
     } catch (error) {
-        console.error("Fetch balance error:", error);
+        console.error("Error loading dashboard:", error);
     }
-    return 0;
 }
 
-async function fetchUsers() {
+// ========== LOAD USERS FOR TRANSFER ==========
+async function loadUsers() {
     try {
-        const response = await fetch(`${API_URL}/users`);
-        const users = await response.json();
+        const res = await fetch(`${API_URL}/users`);
+        const users = await res.json();
         const userList = document.getElementById('userList');
-        if (userList && users.length) {
-            userList.innerHTML = users.map(user => `
-                <div class="user-item" data-name="${user.name}" data-email="${user.email}" data-number="${user.number}">
-                    <div class="user-name">${user.name}</div>
-                    <div class="user-number">${user.number}</div>
+        if (userList) {
+            userList.innerHTML = users.map(u => `
+                <div class="user-item" data-name="${u.name}" data-email="${u.email}">
+                    <div class="user-name">${u.name}</div>
+                    <div class="user-email">${u.email}</div>
                 </div>
             `).join('');
             
-            // Re-attach click handlers
             document.querySelectorAll('.user-item').forEach(item => {
                 item.addEventListener('click', () => {
                     selectedRecipient = {
                         name: item.dataset.name,
-                        email: item.dataset.email,
-                        number: item.dataset.number
+                        email: item.dataset.email
                     };
                     document.getElementById('transferPage').classList.add('hidden');
                     document.getElementById('confirmationPage').classList.remove('hidden');
                     document.getElementById('selectedUserName').textContent = selectedRecipient.name;
-                    document.getElementById('selectedUserNumber').textContent = selectedRecipient.number;
+                    document.getElementById('selectedUserEmail').textContent = selectedRecipient.email;
                 });
             });
         }
     } catch (error) {
-        console.error("Fetch users error:", error);
+        console.error("Error loading users:", error);
     }
 }
 
-async function fetchTransactions() {
-    try {
-        const response = await fetch(`${API_URL}/transactions/${currentUserId}`);
-        const transactions = await response.json();
-        allTransactions = transactions;
-        
-        // Update recent activity
-        const activityDiv = document.querySelector('.activity');
-        if (activityDiv && transactions.length) {
-            const recent = transactions.slice(0, 5);
-            let activityHtml = '<h3>Your recent activity</h3><div style="font-size: 13px; line-height: 1.8;">';
-            recent.forEach(t => {
-                const amount = t.type === 'sent' ? `-₱${t.amount.toLocaleString()}` : `+₱${t.amount.toLocaleString()}`;
-                const color = t.type === 'sent' ? '#dc3545' : '#28a745';
-                activityHtml += `
-                    <div style="display: flex; justify-content: space-between; margin-bottom: 8px; padding: 5px 0; border-bottom: 1px solid #e5e7eb;">
-                        <span>${t.otherParty || 'Transaction'}</span>
-                        <span>${t.date}</span>
-                        <span style="color: ${color};">${amount}</span>
-                    </div>
-                `;
-            });
-            activityHtml += '</div>';
-            activityDiv.innerHTML = activityHtml;
-        }
-        
-        return transactions;
-    } catch (error) {
-        console.error("Fetch transactions error:", error);
+// ========== PAY BILLS FUNCTIONALITY ==========
+async function payBill(category, amount, accountNumber = null) {
+    if (!amount || amount <= 0) {
+        alert('Please enter a valid amount');
+        return false;
     }
-    return [];
-}
-
-async function fetchProfile() {
-    try {
-        const response = await fetch(`${API_URL}/profile/${currentUserId}`);
-        const user = await response.json();
-        if (response.ok) {
-            // Update profile information
-            const profileRows = document.querySelectorAll('.profile-info-row');
-            profileRows.forEach(row => {
-                const label = row.querySelector('.profile-info-label')?.textContent;
-                const valueSpan = row.querySelector('.profile-info-value');
-                if (label === 'Full Name:' && valueSpan) valueSpan.textContent = user.profile?.fullName || user.username;
-                if (label === 'Nationality:' && valueSpan) valueSpan.textContent = user.profile?.nationality || 'Filipino';
-                if (label === 'Address:' && valueSpan) valueSpan.textContent = user.profile?.address || 'Not set';
-                if (label === 'Class:' && valueSpan) valueSpan.textContent = user.profile?.class || 'Not set';
-                if (label === 'Birthday:' && valueSpan) valueSpan.textContent = user.profile?.birthday || 'Not set';
-                if (label === 'Student ID:' && valueSpan) valueSpan.textContent = user.profile?.studentId || 'Not set';
-            });
-            
-            // Update email in profile
-            const emailSpan = document.querySelector('.profile-detail-value');
-            if (emailSpan && emailSpan.closest('.profile-detail-item')?.querySelector('.profile-detail-label')?.textContent === 'Email:') {
-                emailSpan.textContent = user.email;
-            }
-        }
-    } catch (error) {
-        console.error("Fetch profile error:", error);
+    
+    const balanceRes = await fetch(`${API_URL}/balance/${currentUserId}`);
+    const balanceData = await balanceRes.json();
+    
+    if (balanceData.balance < amount) {
+        alert(`Insufficient balance! You only have ₱${balanceData.balance.toFixed(2)}`);
+        return false;
     }
-}
-
-async function fetchEvents() {
+    
     try {
-        const response = await fetch(`${API_URL}/events`);
-        sampleEvents = await response.json();
-        renderEventsCards();
-    } catch (error) {
-        console.error("Fetch events error:", error);
-        // Fallback events (your original events)
-        sampleEvents = [
-            { name: "Music Festival", date: "April 15, 2026", location: "Central Park", fee: "Free", isFree: true },
-            { name: "Tech Conference", date: "April 20, 2026", location: "Convention Center", fee: "₱500", isFree: false },
-            { name: "Food Expo", date: "April 25, 2026", location: "Trade Hall", fee: "Free", isFree: true },
-            { name: "Art Exhibition", date: "May 1, 2026", location: "Art Museum", fee: "₱200", isFree: false },
-            { name: "Sports Tournament", date: "May 5, 2026", location: "Stadium", fee: "Free", isFree: true },
-            { name: "Business Summit", date: "May 10, 2026", location: "Business Center", fee: "₱1000", isFree: false },
-            { name: "Charity Run", date: "May 15, 2026", location: "City Streets", fee: "₱300", isFree: false },
-            { name: "Film Screening", date: "May 20, 2026", location: "Cinema Plaza", fee: "Free", isFree: true }
-        ];
-        renderEventsCards();
-    }
-}
-
-async function performTransfer(recipientEmail, amount, message) {
-    try {
-        const response = await fetch(`${API_URL}/transfer`, {
+        const response = await fetch(`${API_URL}/pay-bill`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                senderId: currentUserId,
-                recipientEmail: recipientEmail,
-                amount: parseFloat(amount),
-                message: message
+                userId: currentUserId,
+                category: category,
+                amount: amount,
+                accountNumber: accountNumber
             })
         });
         
         const data = await response.json();
-        if (response.ok) {
-            await fetchBalance();
-            await fetchTransactions();
-            return { success: true };
+        
+        if (data.success) {
+            alert(`✅ ${data.message}\nNew balance: ₱${data.newBalance.toFixed(2)}`);
+            loadDashboard();
+            return true;
         } else {
-            return { success: false, error: data.error };
+            alert(`❌ Payment failed: ${data.error}`);
+            return false;
         }
     } catch (error) {
-        console.error("Transfer error:", error);
-        return { success: false, error: "Cannot connect to server" };
+        alert('Error processing payment');
+        return false;
     }
 }
 
-// ========== RENDER FUNCTIONS ==========
-function renderEventsCards() {
-    const container = document.getElementById('eventsCards');
-    if (!container) return;
-    
-    container.innerHTML = sampleEvents.map(event => `
-        <div class="event-card" onclick="alert('${event.name}\\nDate: ${event.date}\\nLocation: ${event.location}\\nFee: ${event.fee}')">
-            <div class="event-img">Event Image</div>
-            <div class="event-details">
-                <div class="event-name">${event.name}</div>
-                <div class="event-date">📅 ${event.date}</div>
-                <div class="event-location">📍 ${event.location}</div>
-                <div class="event-fee ${event.isFree ? 'free' : 'paid'}">💰 ${event.fee}</div>
-            </div>
-        </div>
-    `).join('');
-}
+// ========== STUDENT BILLS CATEGORIES ==========
+const studentBills = [
+    { name: "📚 Tuition Fee", category: "Tuition" },
+    { name: "🏫 School Misc", category: "School Misc" },
+    { name: "📖 Books & Materials", category: "Books" },
+    { name: "🎓 Graduation Fee", category: "Graduation" },
+    { name: "🏢 Dormitory", category: "Dormitory" },
+    { name: "🍽️ Meal Plan", category: "Meal Plan" },
+    { name: "🚌 School Bus", category: "Transportation" },
+    { name: "💻 Laptop/Tablet", category: "Device" }
+];
 
-function renderTransactionHistory() {
-    const container = document.getElementById('historyList');
-    if (!container) return;
-    
-    let filtered = [...allTransactions];
-    const dateFilter = document.getElementById('dateFilter')?.value;
-    if (dateFilter) filtered = filtered.filter(t => t.date === dateFilter);
-    
-    const sortOrder = document.getElementById('sortOrder')?.value || 'desc';
-    filtered.sort((a, b) => sortOrder === 'desc' ? new Date(b.date) - new Date(a.date) : new Date(a.date) - new Date(b.date));
-    
-    if (filtered.length === 0) {
-        container.innerHTML = '<div class="empty-history"><div class="empty-history-icon">📭</div><h3>No Transactions Found</h3><p>Try changing your filters</p></div>';
-        return;
+// ========== SETTINGS FUNCTIONALITY ==========
+async function loadSettings() {
+    try {
+        const response = await fetch(`${API_URL}/settings/${currentUserId}`);
+        const settings = await response.json();
+        
+        const pushToggle = document.getElementById('pushNotificationsToggle');
+        const emailToggle = document.getElementById('emailNotificationsToggle');
+        const darkToggle = document.getElementById('darkModeToggle');
+        const langSelect = document.getElementById('languageSelect');
+        
+        if (pushToggle) pushToggle.checked = settings.pushNotifications;
+        if (emailToggle) emailToggle.checked = settings.emailNotifications;
+        if (darkToggle) darkToggle.checked = settings.darkMode;
+        if (langSelect) langSelect.value = settings.language;
+    } catch (error) {
+        console.error("Error loading settings:", error);
     }
-    
-    const grouped = {};
-    filtered.forEach(t => { if (!grouped[t.date]) grouped[t.date] = []; grouped[t.date].push(t); });
-    
-    container.innerHTML = Object.keys(grouped).sort((a,b) => sortOrder === 'desc' ? new Date(b) - new Date(a) : new Date(a) - new Date(b)).map(date => `
-        <div class="date-group">
-            <div class="date-header">📅 ${new Date(date).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</div>
-            ${grouped[date].map(t => `
-                <div class="transaction-item" onclick="alert('To/From: ${t.otherParty}\\nAmount: ${formatCurrency(t.amount)}\\nMessage: ${t.message || 'No message'}')">
-                    <div class="transaction-icon ${t.type}">${t.type === 'sent' ? '📤' : '📥'}</div>
-                    <div class="transaction-details-hist"><div class="transaction-name-hist">${t.otherParty}</div><div class="transaction-message-hist">${t.message || ''}</div></div>
-                    <div class="transaction-amount-hist ${t.type}">${t.type === 'sent' ? '-' : '+'} ${formatCurrency(t.amount)}</div>
-                </div>
-            `).join('')}
-        </div>
-    `).join('');
 }
 
-// ========== PAGE NAVIGATION (KEEP YOUR ORIGINAL FUNCTIONS) ==========
-// Page elements
+async function saveSettings() {
+    try {
+        const settings = {
+            pushNotifications: document.getElementById('pushNotificationsToggle')?.checked || false,
+            emailNotifications: document.getElementById('emailNotificationsToggle')?.checked || false,
+            darkMode: document.getElementById('darkModeToggle')?.checked || false,
+            language: document.getElementById('languageSelect')?.value || 'English'
+        };
+        
+        await fetch(`${API_URL}/settings/${currentUserId}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(settings)
+        });
+        
+        alert('Settings saved!');
+    } catch (error) {
+        alert('Error saving settings');
+    }
+}
+
+// ========== PERFORM TRANSFER ==========
+let selectedRecipient = null;
+
+async function performTransfer(recipientEmail, amount, message) {
+    try {
+        const res = await fetch(`${API_URL}/transfer`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ senderId: currentUserId, recipientEmail, amount: parseFloat(amount), message })
+        });
+        return await res.json();
+    } catch (error) {
+        return { success: false, error: error.message };
+    }
+}
+
+// ========== PAGE NAVIGATION ==========
 const dashboardPage = document.getElementById('dashboardPage');
 const payBillsPage = document.getElementById('payBillsPage');
 const transferPage = document.getElementById('transferPage');
@@ -3497,519 +3448,505 @@ const refundConfirmationPage = document.getElementById('refundConfirmationPage')
 const historyPage = document.getElementById('historyPage');
 const banner = document.getElementById('banner');
 
-// Buttons
-const transferBtn = document.getElementById('transferBtn');
-const payBillsBtn = document.getElementById('payBillsBtn');
-const eventsBtn = document.getElementById('eventsBtn');
-const refundBtn = document.getElementById('refundBtn');
-const pfpBtn = document.querySelector('.sidebar .top button');
-const btn1 = document.querySelector('.sidebar .middle button:nth-child(1)');
-const btn2 = document.querySelector('.sidebar .middle button:nth-child(2)');
-const btn3 = document.querySelector('.sidebar .middle button:nth-child(3)');
-const btn4 = document.querySelector('.sidebar .middle button:nth-child(4)');
-
-// Store selected user and transaction data
-let selectedUser = null;
-let transactionData = {};
-
-// Function to show dashboard
 function showDashboard() {
-    dashboardPage.classList.remove('hidden');
-    payBillsPage.classList.add('hidden');
-    transferPage.classList.add('hidden');
-    confirmationPage.classList.add('hidden');
-    reviewPage.classList.add('hidden');
-    successPage.classList.add('hidden');
-    eventsPage.classList.add('hidden');
-    profilePage.classList.add('hidden');
-    notificationsPage.classList.add('hidden');
-    settingsPage.classList.add('hidden');
-    refundPage.classList.add('hidden');
-    refundConfirmationPage.classList.add('hidden');
-    historyPage.classList.add('hidden');
-    banner.textContent = 'QCU PAY';
-    fetchBalance();
-    fetchTransactions();
+    dashboardPage?.classList.remove('hidden');
+    payBillsPage?.classList.add('hidden');
+    transferPage?.classList.add('hidden');
+    confirmationPage?.classList.add('hidden');
+    reviewPage?.classList.add('hidden');
+    successPage?.classList.add('hidden');
+    eventsPage?.classList.add('hidden');
+    profilePage?.classList.add('hidden');
+    notificationsPage?.classList.add('hidden');
+    settingsPage?.classList.add('hidden');
+    refundPage?.classList.add('hidden');
+    refundConfirmationPage?.classList.add('hidden');
+    historyPage?.classList.add('hidden');
+    if (banner) banner.textContent = 'QCU PAY';
+    loadDashboard();
 }
 
 function showPayBills() {
-    dashboardPage.classList.add('hidden');
-    payBillsPage.classList.remove('hidden');
-    transferPage.classList.add('hidden');
-    confirmationPage.classList.add('hidden');
-    reviewPage.classList.add('hidden');
-    successPage.classList.add('hidden');
-    eventsPage.classList.add('hidden');
-    profilePage.classList.add('hidden');
-    notificationsPage.classList.add('hidden');
-    settingsPage.classList.add('hidden');
-    refundPage.classList.add('hidden');
-    refundConfirmationPage.classList.add('hidden');
-    historyPage.classList.add('hidden');
-    banner.textContent = 'QCU PAY - BILLS';
-    fetchBalance();
+    dashboardPage?.classList.add('hidden');
+    payBillsPage?.classList.remove('hidden');
+    transferPage?.classList.add('hidden');
+    confirmationPage?.classList.add('hidden');
+    reviewPage?.classList.add('hidden');
+    successPage?.classList.add('hidden');
+    eventsPage?.classList.add('hidden');
+    profilePage?.classList.add('hidden');
+    notificationsPage?.classList.add('hidden');
+    settingsPage?.classList.add('hidden');
+    refundPage?.classList.add('hidden');
+    refundConfirmationPage?.classList.add('hidden');
+    historyPage?.classList.add('hidden');
+    if (banner) banner.textContent = 'QCU PAY - STUDENT BILLS';
+    loadDashboard();
 }
 
 function showTransfer() {
-    dashboardPage.classList.add('hidden');
-    payBillsPage.classList.add('hidden');
-    transferPage.classList.remove('hidden');
-    confirmationPage.classList.add('hidden');
-    reviewPage.classList.add('hidden');
-    successPage.classList.add('hidden');
-    eventsPage.classList.add('hidden');
-    profilePage.classList.add('hidden');
-    notificationsPage.classList.add('hidden');
-    settingsPage.classList.add('hidden');
-    refundPage.classList.add('hidden');
-    refundConfirmationPage.classList.add('hidden');
-    historyPage.classList.add('hidden');
-    banner.textContent = 'QCU PAY - TRANSFER';
-    fetchUsers();
+    dashboardPage?.classList.add('hidden');
+    payBillsPage?.classList.add('hidden');
+    transferPage?.classList.remove('hidden');
+    confirmationPage?.classList.add('hidden');
+    reviewPage?.classList.add('hidden');
+    successPage?.classList.add('hidden');
+    eventsPage?.classList.add('hidden');
+    profilePage?.classList.add('hidden');
+    notificationsPage?.classList.add('hidden');
+    settingsPage?.classList.add('hidden');
+    refundPage?.classList.add('hidden');
+    refundConfirmationPage?.classList.add('hidden');
+    historyPage?.classList.add('hidden');
+    if (banner) banner.textContent = 'QCU PAY - TRANSFER';
+    loadUsers();
 }
 
 function showEvents() {
-    dashboardPage.classList.add('hidden');
-    payBillsPage.classList.add('hidden');
-    transferPage.classList.add('hidden');
-    confirmationPage.classList.add('hidden');
-    reviewPage.classList.add('hidden');
-    successPage.classList.add('hidden');
-    eventsPage.classList.remove('hidden');
-    profilePage.classList.add('hidden');
-    notificationsPage.classList.add('hidden');
-    settingsPage.classList.add('hidden');
-    refundPage.classList.add('hidden');
-    refundConfirmationPage.classList.add('hidden');
-    historyPage.classList.add('hidden');
-    banner.textContent = 'QCU PAY - EVENTS';
-    fetchEvents();
+    dashboardPage?.classList.add('hidden');
+    payBillsPage?.classList.add('hidden');
+    transferPage?.classList.add('hidden');
+    confirmationPage?.classList.add('hidden');
+    reviewPage?.classList.add('hidden');
+    successPage?.classList.add('hidden');
+    eventsPage?.classList.remove('hidden');
+    profilePage?.classList.add('hidden');
+    notificationsPage?.classList.add('hidden');
+    settingsPage?.classList.add('hidden');
+    refundPage?.classList.add('hidden');
+    refundConfirmationPage?.classList.add('hidden');
+    historyPage?.classList.add('hidden');
+    if (banner) banner.textContent = 'QCU PAY - EVENTS';
 }
 
 function showProfile() {
-    dashboardPage.classList.add('hidden');
-    payBillsPage.classList.add('hidden');
-    transferPage.classList.add('hidden');
-    confirmationPage.classList.add('hidden');
-    reviewPage.classList.add('hidden');
-    successPage.classList.add('hidden');
-    eventsPage.classList.add('hidden');
-    profilePage.classList.remove('hidden');
-    notificationsPage.classList.add('hidden');
-    settingsPage.classList.add('hidden');
-    refundPage.classList.add('hidden');
-    refundConfirmationPage.classList.add('hidden');
-    historyPage.classList.add('hidden');
-    banner.textContent = 'QCU PROFILE';
-    fetchBalance();
-    fetchProfile();
-}
-
-function showNotifications() {
-    dashboardPage.classList.add('hidden');
-    payBillsPage.classList.add('hidden');
-    transferPage.classList.add('hidden');
-    confirmationPage.classList.add('hidden');
-    reviewPage.classList.add('hidden');
-    successPage.classList.add('hidden');
-    eventsPage.classList.add('hidden');
-    profilePage.classList.add('hidden');
-    notificationsPage.classList.remove('hidden');
-    settingsPage.classList.add('hidden');
-    refundPage.classList.add('hidden');
-    refundConfirmationPage.classList.add('hidden');
-    historyPage.classList.add('hidden');
-    banner.textContent = 'QCU NOTIFICATIONS';
+    dashboardPage?.classList.add('hidden');
+    payBillsPage?.classList.add('hidden');
+    transferPage?.classList.add('hidden');
+    confirmationPage?.classList.add('hidden');
+    reviewPage?.classList.add('hidden');
+    successPage?.classList.add('hidden');
+    eventsPage?.classList.add('hidden');
+    profilePage?.classList.remove('hidden');
+    notificationsPage?.classList.add('hidden');
+    settingsPage?.classList.add('hidden');
+    refundPage?.classList.add('hidden');
+    refundConfirmationPage?.classList.add('hidden');
+    historyPage?.classList.add('hidden');
+    if (banner) banner.textContent = 'QCU PROFILE';
+    loadDashboard();
 }
 
 function showSettings() {
-    dashboardPage.classList.add('hidden');
-    payBillsPage.classList.add('hidden');
-    transferPage.classList.add('hidden');
-    confirmationPage.classList.add('hidden');
-    reviewPage.classList.add('hidden');
-    successPage.classList.add('hidden');
-    eventsPage.classList.add('hidden');
-    profilePage.classList.add('hidden');
-    notificationsPage.classList.add('hidden');
-    settingsPage.classList.remove('hidden');
-    refundPage.classList.add('hidden');
-    refundConfirmationPage.classList.add('hidden');
-    historyPage.classList.add('hidden');
-    banner.textContent = 'QCU SETTINGS';
+    dashboardPage?.classList.add('hidden');
+    payBillsPage?.classList.add('hidden');
+    transferPage?.classList.add('hidden');
+    confirmationPage?.classList.add('hidden');
+    reviewPage?.classList.add('hidden');
+    successPage?.classList.add('hidden');
+    eventsPage?.classList.add('hidden');
+    profilePage?.classList.add('hidden');
+    notificationsPage?.classList.add('hidden');
+    settingsPage?.classList.remove('hidden');
+    refundPage?.classList.add('hidden');
+    refundConfirmationPage?.classList.add('hidden');
+    historyPage?.classList.add('hidden');
+    if (banner) banner.textContent = 'QCU SETTINGS';
+    loadSettings();
 }
 
 function showHistory() {
-    dashboardPage.classList.add('hidden');
-    payBillsPage.classList.add('hidden');
-    transferPage.classList.add('hidden');
-    confirmationPage.classList.add('hidden');
-    reviewPage.classList.add('hidden');
-    successPage.classList.add('hidden');
-    eventsPage.classList.add('hidden');
-    profilePage.classList.add('hidden');
-    notificationsPage.classList.add('hidden');
-    settingsPage.classList.add('hidden');
-    refundPage.classList.add('hidden');
-    refundConfirmationPage.classList.add('hidden');
-    historyPage.classList.remove('hidden');
-    banner.textContent = 'QCU HISTORY';
-    renderTransactionHistory();
+    dashboardPage?.classList.add('hidden');
+    payBillsPage?.classList.add('hidden');
+    transferPage?.classList.add('hidden');
+    confirmationPage?.classList.add('hidden');
+    reviewPage?.classList.add('hidden');
+    successPage?.classList.add('hidden');
+    eventsPage?.classList.add('hidden');
+    profilePage?.classList.add('hidden');
+    notificationsPage?.classList.add('hidden');
+    settingsPage?.classList.add('hidden');
+    refundPage?.classList.add('hidden');
+    refundConfirmationPage?.classList.add('hidden');
+    historyPage?.classList.remove('hidden');
+    if (banner) banner.textContent = 'QCU HISTORY';
 }
 
 function showRefund() {
-    dashboardPage.classList.add('hidden');
-    payBillsPage.classList.add('hidden');
-    transferPage.classList.add('hidden');
+    dashboardPage?.classList.add('hidden');
+    payBillsPage?.classList.add('hidden');
+    transferPage?.classList.add('hidden');
+    confirmationPage?.classList.add('hidden');
+    reviewPage?.classList.add('hidden');
+    successPage?.classList.add('hidden');
+    eventsPage?.classList.add('hidden');
+    profilePage?.classList.add('hidden');
+    notificationsPage?.classList.add('hidden');
+    settingsPage?.classList.add('hidden');
+    refundPage?.classList.remove('hidden');
+    refundConfirmationPage?.classList.add('hidden');
+    historyPage?.classList.add('hidden');
+    if (banner) banner.textContent = 'QCU PAY - REFUND';
+}
+
+// ========== EVENT LISTENERS ==========
+document.getElementById('payBillsBtn')?.addEventListener('click', showPayBills);
+document.getElementById('transferBtn')?.addEventListener('click', showTransfer);
+document.getElementById('eventsBtn')?.addEventListener('click', showEvents);
+document.getElementById('refundBtn')?.addEventListener('click', showRefund);
+document.querySelector('.sidebar .top button')?.addEventListener('click', showProfile);
+document.querySelector('.sidebar .middle button:nth-child(1)')?.addEventListener('click', showDashboard);
+document.querySelector('.sidebar .middle button:nth-child(2)')?.addEventListener('click', showHistory);
+document.querySelector('.sidebar .middle button:nth-child(3)')?.addEventListener('click', showSettings);
+document.querySelector('.sidebar .middle button:nth-child(4)')?.addEventListener('click', showSettings);
+
+// Back buttons
+document.getElementById('backFromPayBillsBtn')?.addEventListener('click', showDashboard);
+document.getElementById('backFromTransferBtn')?.addEventListener('click', showDashboard);
+document.getElementById('backFromEventsBtn')?.addEventListener('click', showDashboard);
+document.getElementById('backFromProfileBtn')?.addEventListener('click', showDashboard);
+document.getElementById('backFromSettingsBtn')?.addEventListener('click', showDashboard);
+document.getElementById('backFromHistoryBtn')?.addEventListener('click', showDashboard);
+document.getElementById('backFromRefundBtn')?.addEventListener('click', showDashboard);
+document.getElementById('backToDashboardSuccessBtn')?.addEventListener('click', showDashboard);
+
+// Profile buttons
+document.getElementById('profileTransferBtn')?.addEventListener('click', showTransfer);
+document.getElementById('profilePayBillsBtn')?.addEventListener('click', showPayBills);
+
+// Transfer flow
+document.getElementById('enterButton')?.addEventListener('click', () => {
+    const amount = document.getElementById('amountInput')?.value;
+    const message = document.getElementById('messageInput')?.value;
+    if (!amount || amount <= 0) {
+        alert('Please enter a valid amount');
+        return;
+    }
+    document.getElementById('reviewUserName').textContent = selectedRecipient?.name;
+    document.getElementById('reviewAmount').textContent = formatCurrency(amount);
+    document.getElementById('reviewMessage').textContent = message || 'No message';
     confirmationPage.classList.add('hidden');
-    reviewPage.classList.add('hidden');
-    successPage.classList.add('hidden');
-    eventsPage.classList.add('hidden');
-    profilePage.classList.add('hidden');
-    notificationsPage.classList.add('hidden');
-    settingsPage.classList.add('hidden');
-    refundPage.classList.remove('hidden');
-    refundConfirmationPage.classList.add('hidden');
-    historyPage.classList.add('hidden');
-    banner.textContent = 'QCU PAY - REFUND';
-}
-
-// Navigation event listeners
-if (transferBtn) transferBtn.addEventListener('click', showTransfer);
-if (payBillsBtn) payBillsBtn.addEventListener('click', showPayBills);
-if (eventsBtn) eventsBtn.addEventListener('click', showEvents);
-if (refundBtn) refundBtn.addEventListener('click', showRefund);
-if (pfpBtn) pfpBtn.addEventListener('click', showProfile);
-if (btn1) btn1.addEventListener('click', showDashboard);
-if (btn2) btn2.addEventListener('click', showHistory);
-if (btn3) btn3.addEventListener('click', showNotifications);
-if (btn4) btn4.addEventListener('click', showSettings);
-
-// Back button listeners
-const backFromPayBillsBtn = document.getElementById('backFromPayBillsBtn');
-const backFromEventsBtn = document.getElementById('backFromEventsBtn');
-const backFromProfileBtn = document.getElementById('backFromProfileBtn');
-const backFromNotificationsBtn = document.getElementById('backFromNotificationsBtn');
-const backFromSettingsBtn = document.getElementById('backFromSettingsBtn');
-const backFromTransferBtn = document.getElementById('backFromTransferBtn');
-const backFromHistoryBtn = document.getElementById('backFromHistoryBtn');
-const backFromRefundBtn = document.getElementById('backFromRefundBtn');
-const backToDashboardSuccessBtn = document.getElementById('backToDashboardSuccessBtn');
-const backToDashboardFromRefundBtn = document.getElementById('backToDashboardFromRefundBtn');
-
-if (backFromPayBillsBtn) backFromPayBillsBtn.addEventListener('click', showDashboard);
-if (backFromEventsBtn) backFromEventsBtn.addEventListener('click', showDashboard);
-if (backFromProfileBtn) backFromProfileBtn.addEventListener('click', showDashboard);
-if (backFromNotificationsBtn) backFromNotificationsBtn.addEventListener('click', showDashboard);
-if (backFromSettingsBtn) backFromSettingsBtn.addEventListener('click', showDashboard);
-if (backFromTransferBtn) backFromTransferBtn.addEventListener('click', showDashboard);
-if (backFromHistoryBtn) backFromHistoryBtn.addEventListener('click', showDashboard);
-if (backFromRefundBtn) backFromRefundBtn.addEventListener('click', showDashboard);
-if (backToDashboardSuccessBtn) backToDashboardSuccessBtn.addEventListener('click', showDashboard);
-if (backToDashboardFromRefundBtn) backToDashboardFromRefundBtn.addEventListener('click', showDashboard);
-
-// ========== TRANSFER FLOW ==========
-const searchInput = document.getElementById('searchInput');
-const userItems = document.querySelectorAll('#userList .user-item');
-const qrPlaceholder = document.getElementById('qrPlaceholder');
-const enterButton = document.getElementById('enterButton');
-const confirmButton = document.getElementById('confirmButton');
-
-if (searchInput) {
-    searchInput.addEventListener('input', function() {
-        const searchTerm = this.value.toLowerCase();
-        document.querySelectorAll('.user-item').forEach(item => {
-            const name = item.querySelector('.user-name')?.textContent.toLowerCase() || '';
-            item.style.display = name.includes(searchTerm) ? 'flex' : 'none';
-        });
-    });
-}
-
-if (enterButton) {
-    enterButton.addEventListener('click', function() {
-        const amount = document.getElementById('amountInput').value;
-        const message = document.getElementById('messageInput').value;
-        
-        if (!amount || amount <= 0) {
-            alert('Please enter a valid amount');
-            return;
-        }
-        
-        transactionData = { user: selectedRecipient, amount: amount, message: message || 'No message' };
-        
-        document.getElementById('reviewUserName').textContent = selectedRecipient?.name;
-        document.getElementById('reviewUserNumber').textContent = selectedRecipient?.number;
-        document.getElementById('reviewAmount').textContent = `₱${parseFloat(amount).toLocaleString(undefined, {minimumFractionDigits: 2})}`;
-        document.getElementById('reviewMessage').textContent = transactionData.message;
-        
-        confirmationPage.classList.add('hidden');
-        reviewPage.classList.remove('hidden');
-    });
-}
-
-if (confirmButton) {
-    confirmButton.addEventListener('click', async function() {
-        const result = await performTransfer(selectedRecipient?.email, transactionData.amount, transactionData.message);
-        
-        if (result.success) {
-            document.getElementById('successUserName').textContent = selectedRecipient?.name;
-            document.getElementById('successAmount').textContent = `₱${parseFloat(transactionData.amount).toLocaleString(undefined, {minimumFractionDigits: 2})}`;
-            document.getElementById('successMessage').textContent = transactionData.message;
-            
-            reviewPage.classList.add('hidden');
-            successPage.classList.remove('hidden');
-            
-            // Clear inputs
-            document.getElementById('amountInput').value = '';
-            document.getElementById('messageInput').value = '';
-            selectedRecipient = null;
-        } else {
-            alert('Transfer failed: ' + result.error);
-        }
-    });
-}
-
-if (qrPlaceholder) {
-    qrPlaceholder.addEventListener('click', () => alert('QR Code Scanner coming soon!'));
-}
-
-// ========== PROFILE EDIT ==========
-const editInfoBtn = document.getElementById('editInfoBtn');
-if (editInfoBtn) {
-    editInfoBtn.addEventListener('click', async () => {
-        const newName = prompt('Enter new full name:', document.querySelector('.profile-info-value')?.textContent);
-        const newAddress = prompt('Enter new address:', document.querySelectorAll('.profile-info-value')[2]?.textContent);
-        if (newName || newAddress) {
-            try {
-                await fetch(`${API_URL}/profile/${currentUserId}`, {
-                    method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ fullName: newName, address: newAddress })
-                });
-                alert('Profile updated!');
-                fetchProfile();
-            } catch (error) {
-                alert('Update failed');
-            }
-        }
-    });
-}
-
-// Profile page buttons
-const profileTransferBtn = document.getElementById('profileTransferBtn');
-const profilePayBillsBtn = document.getElementById('profilePayBillsBtn');
-if (profileTransferBtn) profileTransferBtn.addEventListener('click', showTransfer);
-if (profilePayBillsBtn) profilePayBillsBtn.addEventListener('click', showPayBills);
-
-// ========== LOGOUT ==========
-const logoutBtnSidebar = document.getElementById('logoutBtn');
-const logoutModal = document.getElementById('logoutModal');
-const logoutYesBtn = document.getElementById('logoutYesBtn');
-const logoutNoBtn = document.getElementById('logoutNoBtn');
-
-if (logoutBtnSidebar) {
-    logoutBtnSidebar.addEventListener('click', function() {
-        if (logoutModal) logoutModal.classList.remove('hidden');
-    });
-}
-if (logoutYesBtn) {
-    logoutYesBtn.addEventListener('click', function() {
-        localStorage.clear();
-        window.location.href = "Login.html";
-    });
-}
-if (logoutNoBtn && logoutModal) {
-    logoutNoBtn.addEventListener('click', function() {
-        logoutModal.classList.add('hidden');
-    });
-}
-
-// ========== EVENTS PAGE (keep your original banner and scroll) ==========
-const bannerMessages = ["🎉 Special Event: Summer Festival 2026!", "🔥 Limited Time Offer: Early Bird Discount!", "⭐ New Event Added: Tech Conference 2026"];
-const eventsBannerDiv = document.getElementById('eventsBanner');
-const eventsCardsDiv = document.getElementById('eventsCards');
-const scrollLeftBtnEvents = document.getElementById('scrollLeftBtn');
-const scrollRightBtnEvents = document.getElementById('scrollRightBtn');
-
-function renderEventsBanner() {
-    if (eventsBannerDiv) {
-        eventsBannerDiv.innerHTML = '';
-        bannerMessages.forEach((message, index) => {
-            const msgDiv = document.createElement('div');
-            msgDiv.className = 'banner-message' + (index === 0 ? ' active' : '');
-            msgDiv.textContent = message;
-            eventsBannerDiv.appendChild(msgDiv);
-        });
-    }
-}
-
-let currentBannerIndex = 0;
-function rotateBanner(direction) {
-    const messages = document.querySelectorAll('.banner-message');
-    if (messages.length) {
-        messages[currentBannerIndex]?.classList.remove('active');
-        if (direction === 'next') {
-            currentBannerIndex = (currentBannerIndex + 1) % messages.length;
-        } else {
-            currentBannerIndex = (currentBannerIndex - 1 + messages.length) % messages.length;
-        }
-        messages[currentBannerIndex]?.classList.add('active');
-    }
-}
-
-let currentIndex = 0;
-const cardsPerView = 3;
-const maxIndex = Math.ceil(sampleEvents.length / cardsPerView) - 1;
-
-function updateScroll() {
-    const firstCard = document.querySelector('.event-card');
-    const cardWidth = firstCard ? firstCard.offsetWidth + 20 : 0;
-    const scrollAmount = currentIndex * (cardWidth * cardsPerView);
-    if (eventsCardsDiv) eventsCardsDiv.style.transform = `translateX(-${scrollAmount}px)`;
-    if (scrollLeftBtnEvents) scrollLeftBtnEvents.disabled = currentIndex === 0;
-    if (scrollRightBtnEvents) scrollRightBtnEvents.disabled = currentIndex >= maxIndex;
-}
-
-function scrollLeft() { if (currentIndex > 0) { currentIndex--; updateScroll(); } rotateBanner('prev'); }
-function scrollRight() { if (currentIndex < maxIndex) { currentIndex++; updateScroll(); } rotateBanner('next'); }
-function resetScroll() { currentIndex = 0; setTimeout(updateScroll, 100); }
-
-if (scrollLeftBtnEvents) scrollLeftBtnEvents.addEventListener('click', scrollLeft);
-if (scrollRightBtnEvents) scrollRightBtnEvents.addEventListener('click', scrollRight);
-window.addEventListener('resize', () => { if (!eventsPage?.classList.contains('hidden')) updateScroll(); });
-
-// ========== SETTINGS PAGE HANDLERS ==========
-const changePasswordBtn = document.getElementById('changePasswordBtn');
-const changeEmailBtn = document.getElementById('changeEmailBtn');
-const twoFactorBtn = document.getElementById('twoFactorBtn');
-const verifyEmailBtn = document.getElementById('verifyEmailBtn');
-const deleteAccountBtn = document.getElementById('deleteAccountBtn');
-const currencySelect = document.getElementById('currencySelect');
-
-if (changePasswordBtn) changePasswordBtn.addEventListener('click', () => alert('Change Password feature coming soon!'));
-if (changeEmailBtn) changeEmailBtn.addEventListener('click', () => alert('Change Email feature coming soon!'));
-if (twoFactorBtn) twoFactorBtn.addEventListener('click', () => alert('Two-Factor Authentication setup coming soon!'));
-if (verifyEmailBtn) verifyEmailBtn.addEventListener('click', () => alert('Verification email sent! Check your inbox.'));
-if (deleteAccountBtn) deleteAccountBtn.addEventListener('click', () => alert('Account deletion is not available at this time.'));
-if (currencySelect) currencySelect.addEventListener('change', (e) => alert(`Currency changed to ${e.target.options[e.target.selectedIndex].text}`));
-
-// Category buttons
-document.querySelectorAll('.category-btn').forEach(btn => {
-    btn.addEventListener('click', () => alert(`You clicked ${btn.textContent}. This will open category details page.`));
+    reviewPage.classList.remove('hidden');
 });
 
-// ========== REFUND PAGE ==========
-const submitRefundBtn = document.getElementById('submitRefundBtn');
-if (submitRefundBtn) {
-    submitRefundBtn.addEventListener('click', function() {
-        const firstName = document.getElementById('firstName')?.value.trim();
-        const lastName = document.getElementById('lastName')?.value.trim();
-        const email = document.getElementById('email')?.value.trim();
-        const contact = document.getElementById('contact')?.value.trim();
-        const category = document.getElementById('refundCategory')?.value;
-        const amount = document.getElementById('refundAmount')?.value;
-        const reason = document.getElementById('refundReason')?.value.trim();
-        
-        if (!firstName || !lastName) { alert('Please enter your first and last name'); return; }
-        if (!email) { alert('Please enter your email address'); return; }
-        if (!contact) { alert('Please enter your contact number'); return; }
-        if (!category) { alert('Please select a category'); return; }
-        if (!amount || amount <= 0) { alert('Please enter a valid refund amount'); return; }
-        if (!reason) { alert('Please provide a reason for the refund'); return; }
-        
-        document.getElementById('confirmFullName').textContent = `${firstName} ${lastName}`;
-        document.getElementById('confirmEmail').textContent = email;
-        document.getElementById('confirmContact').textContent = contact;
-        document.getElementById('confirmCategory').textContent = category;
-        document.getElementById('confirmAmount').textContent = `₱${parseFloat(amount).toLocaleString()}`;
-        document.getElementById('confirmReason').textContent = reason;
-        
-        refundPage.classList.add('hidden');
-        refundConfirmationPage.classList.remove('hidden');
-        banner.textContent = 'QCU REFUND SUBMITTED';
-    });
-}
-
-// ========== HISTORY FILTERS ==========
-const sortOrderSelect = document.getElementById('sortOrder');
-const dateFilterInput = document.getElementById('dateFilter');
-const clearFilterBtn = document.getElementById('clearFilterBtn');
-
-if (sortOrderSelect) sortOrderSelect.addEventListener('change', renderTransactionHistory);
-if (dateFilterInput) dateFilterInput.addEventListener('change', renderTransactionHistory);
-if (clearFilterBtn) {
-    clearFilterBtn.addEventListener('click', () => {
-        if (dateFilterInput) dateFilterInput.value = '';
-        renderTransactionHistory();
-    });
-}
-
-// ========== NOTIFICATION SYSTEM ==========
-const slidingNotification = document.getElementById('slidingNotification');
-const closeNotificationBtn = document.getElementById('closeNotificationBtn');
-const notifDismissBtn = document.getElementById('notifDismissBtn');
-const notifGotoSavingsBtn = document.getElementById('notifGotoSavingsBtn');
-
-const BALANCE_LIMIT = 4000;
-let notificationTimeout = null;
-
-function getCurrentBalanceValue() {
-    const balanceEl = document.querySelector('.balance .box:first-child .amount');
-    if (balanceEl) {
-        const match = balanceEl.textContent.match(/[\d,]+\.?\d*/);
-        if (match) return parseFloat(match[0].replace(/,/g, ''));
+document.getElementById('confirmButton')?.addEventListener('click', async () => {
+    const amount = document.getElementById('amountInput')?.value;
+    const message = document.getElementById('messageInput')?.value;
+    
+    const result = await performTransfer(selectedRecipient?.email, amount, message);
+    if (result.success) {
+        document.getElementById('successUserName').textContent = selectedRecipient?.name;
+        document.getElementById('successAmount').textContent = formatCurrency(amount);
+        reviewPage.classList.add('hidden');
+        successPage.classList.remove('hidden');
+        document.getElementById('amountInput').value = '';
+        document.getElementById('messageInput').value = '';
+        loadDashboard();
+    } else {
+        alert('Transfer failed: ' + (result.error || 'Unknown error'));
     }
-    return 25000;
-}
+});
 
-function hideNotification() {
-    if (slidingNotification) {
-        slidingNotification.classList.add('auto-hide');
-        setTimeout(() => {
-            slidingNotification.classList.add('hidden');
-            slidingNotification.classList.remove('auto-hide');
-        }, 400);
+// Student Bills Category Buttons
+function setupCategoryButtons() {
+    const categoriesGrid = document.querySelector('.categories-grid');
+    if (categoriesGrid) {
+        categoriesGrid.innerHTML = '';
+        studentBills.forEach(bill => {
+            const btn = document.createElement('button');
+            btn.className = 'category-btn';
+            btn.textContent = bill.name;
+            btn.addEventListener('click', async () => {
+                const amount = parseFloat(prompt(`Enter amount to pay for ${bill.name}:`, "500"));
+                if (amount && !isNaN(amount)) {
+                    const reference = prompt("Enter reference number (optional):", "STU-" + Math.floor(Math.random() * 10000));
+                    await payBill(bill.category, amount, reference);
+                }
+            });
+            categoriesGrid.appendChild(btn);
+        });
     }
 }
 
-function showNotification() {
-    const currentBalance = getCurrentBalanceValue();
-    if (currentBalance >= BALANCE_LIMIT && slidingNotification) {
-        const exceededAmount = currentBalance - BALANCE_LIMIT;
-        document.getElementById('notificationMainMessage').innerHTML = `⚠️ Balance Alert! Your balance exceeds the ₱${BALANCE_LIMIT.toLocaleString()} limit.`;
-        document.getElementById('notifCurrentBalance').textContent = formatCurrency(currentBalance);
-        document.getElementById('notifLimitThreshold').textContent = formatCurrency(BALANCE_LIMIT);
-        document.getElementById('notifExceededBy').textContent = formatCurrency(exceededAmount);
-        
-        slidingNotification.classList.remove('hidden');
-        if (notificationTimeout) clearTimeout(notificationTimeout);
-        notificationTimeout = setTimeout(hideNotification, 6000);
+// Edit Profile
+document.getElementById('editInfoBtn')?.addEventListener('click', async () => {
+    const newName = prompt('Enter new full name:', document.getElementById('profileFullName')?.textContent);
+    const newAddress = prompt('Enter new address:', document.getElementById('profileAddress')?.textContent);
+    const newClass = prompt('Enter your class/year:', document.getElementById('profileClass')?.textContent);
+    
+    if (newName || newAddress || newClass) {
+        try {
+            await fetch(`${API_URL}/profile/${currentUserId}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ fullName: newName, address: newAddress, class: newClass })
+            });
+            alert('Profile updated!');
+            loadDashboard();
+        } catch (error) {
+            alert('Update failed');
+        }
     }
-}
+});
 
-if (closeNotificationBtn) closeNotificationBtn.addEventListener('click', hideNotification);
-if (notifDismissBtn) notifDismissBtn.addEventListener('click', hideNotification);
-if (notifGotoSavingsBtn) notifGotoSavingsBtn.addEventListener('click', () => { hideNotification(); showPayBills(); });
+// Settings handlers
+document.getElementById('saveSettingsBtn')?.addEventListener('click', saveSettings);
+document.getElementById('changePasswordBtn')?.addEventListener('click', async () => {
+    const currentPassword = prompt("Enter current password:");
+    if (!currentPassword) return;
+    const newPassword = prompt("Enter new password (min 6 characters):");
+    if (!newPassword || newPassword.length < 6) {
+        alert("Password must be at least 6 characters");
+        return;
+    }
+    const confirmPassword = prompt("Confirm new password:");
+    if (newPassword !== confirmPassword) {
+        alert("Passwords don't match");
+        return;
+    }
+    try {
+        const response = await fetch(`${API_URL}/change-password/${currentUserId}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ currentPassword, newPassword })
+        });
+        const data = await response.json();
+        alert(data.success ? "Password changed successfully!" : data.error);
+    } catch (error) {
+        alert("Error changing password");
+    }
+});
 
-setTimeout(showNotification, 1500);
+document.getElementById('changeEmailBtn')?.addEventListener('click', async () => {
+    const newEmail = prompt("Enter new email address:");
+    if (!newEmail) return;
+    const password = prompt("Enter your password to confirm:");
+    if (!password) return;
+    try {
+        const response = await fetch(`${API_URL}/change-email/${currentUserId}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ newEmail, password })
+        });
+        const data = await response.json();
+        if (data.success) {
+            alert(`Email changed to ${data.newEmail}`);
+            localStorage.setItem('userEmail', data.newEmail);
+        } else {
+            alert(data.error);
+        }
+    } catch (error) {
+        alert("Error changing email");
+    }
+});
 
-// ========== DATE/TIME UPDATE ==========
+document.getElementById('deleteAccountBtn')?.addEventListener('click', async () => {
+    const confirm = prompt("Type 'DELETE' to confirm account deletion:");
+    if (confirm !== "DELETE") return;
+    const password = prompt("Enter your password to confirm:");
+    if (!password) return;
+    try {
+        const response = await fetch(`${API_URL}/delete-account/${currentUserId}`, {
+            method: 'DELETE',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ password })
+        });
+        const data = await response.json();
+        if (data.success) {
+            alert("Account deleted. Goodbye!");
+            localStorage.clear();
+            window.location.href = "Login.html";
+        } else {
+            alert(data.error);
+        }
+    } catch (error) {
+        alert("Error deleting account");
+    }
+});
+
+document.getElementById('verifyEmailBtn')?.addEventListener('click', () => {
+    alert(`Verification email sent to ${localStorage.getItem('userEmail')}`);
+});
+
+document.getElementById('currencySelect')?.addEventListener('change', (e) => {
+    alert(`Currency preference saved: ${e.target.value}`);
+});
+
+// Refund submission
+document.getElementById('submitRefundBtn')?.addEventListener('click', () => {
+    const name = document.getElementById('refundName')?.value;
+    const email = document.getElementById('refundEmail')?.value;
+    const category = document.getElementById('refundCategory')?.value;
+    const amount = document.getElementById('refundAmount')?.value;
+    const reason = document.getElementById('refundReason')?.value;
+    
+    if (!name || !email || !category || !amount || !reason) {
+        alert("Please fill all required fields");
+        return;
+    }
+    
+    alert(`Refund request submitted!\n\nName: ${name}\nEmail: ${email}\nCategory: ${category}\nAmount: ₱${amount}\nReason: ${reason}\n\nWe will process your request within 3-5 business days.`);
+    
+    document.getElementById('refundName').value = '';
+    document.getElementById('refundEmail').value = '';
+    document.getElementById('refundCategory').value = '';
+    document.getElementById('refundAmount').value = '';
+    document.getElementById('refundReason').value = '';
+    
+    showDashboard();
+});
+
+// Logout
+document.getElementById('logoutBtn')?.addEventListener('click', () => {
+    if (confirm('Are you sure you want to logout?')) {
+        localStorage.clear();
+        window.location.href = "Login.html";
+    }
+});
+
+// Date/Time update
 function updateDateTime() {
     const now = new Date();
     const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
-    const timeOptions = { hour: '2-digit', minute: '2-digit', second: '2-digit' };
-    const dateTimeEl = document.querySelector('.greeting .date');
-    if (dateTimeEl) {
-        dateTimeEl.textContent = `${now.toLocaleDateString('en-US', options)} | ${now.toLocaleTimeString('en-US', timeOptions)}`;
-    }
+    const dateEl = document.querySelector('.greeting .date');
+    if (dateEl) dateEl.textContent = now.toLocaleDateString('en-US', options);
 }
 updateDateTime();
 setInterval(updateDateTime, 1000);
+// ========== NOTIFICATIONS SYSTEM ==========
+async function loadNotifications() {
+    try {
+        const response = await fetch(`${API_URL}/notifications/${currentUserId}`);
+        const notifications = await response.json();
+        
+        const notificationContainer = document.querySelector('.notifications');
+        if (notificationContainer && notifications.length > 0) {
+            let html = '<h3>🔔 Notifications</h3>';
+            notifications.forEach(n => {
+                html += `
+                    <div style="padding: 12px; margin-bottom: 10px; background: ${n.type === 'critical' ? '#ffebee' : '#fff3cd'}; border-radius: 8px; border-left: 4px solid ${n.type === 'critical' ? '#dc3545' : '#ffc107'};">
+                        <strong style="color: ${n.type === 'critical' ? '#dc3545' : '#856404'};">${n.title}</strong>
+                        <div style="font-size: 13px; margin-top: 5px;">${n.message}</div>
+                        <div style="font-size: 11px; color: #999; margin-top: 5px;">${n.time}</div>
+                    </div>
+                `;
+            });
+            notificationContainer.innerHTML = html;
+        } else if (notificationContainer) {
+            notificationContainer.innerHTML = '<h3>🔔 Notifications</h3><div style="padding: 15px; text-align: center; color: #999;">No new notifications</div>';
+        }
+    } catch (error) {
+        console.error("Error loading notifications:", error);
+    }
+}
 
-// ========== INITIALIZE DASHBOARD ==========
-fetchBalance();
-fetchTransactions();
-fetchProfile();
+// ========== LOAD TRANSACTION HISTORY ==========
+async function loadTransactionHistory() {
+    try {
+        const response = await fetch(`${API_URL}/transactions/${currentUserId}`);
+        const transactions = await response.json();
+        
+        const historyList = document.getElementById('historyList');
+        if (!historyList) return;
+        
+        if (transactions.length === 0) {
+            historyList.innerHTML = '<div class="empty-history"><div class="empty-history-icon">📭</div><h3>No Transactions Yet</h3><p>Your transactions will appear here</p></div>';
+            return;
+        }
+        
+        // Group by date
+        const grouped = {};
+        transactions.forEach(t => {
+            if (!grouped[t.date]) grouped[t.date] = [];
+            grouped[t.date].push(t);
+        });
+        
+        let html = '';
+        Object.keys(grouped).sort().reverse().forEach(date => {
+            html += `<div class="date-group"><div class="date-header">📅 ${new Date(date).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</div>`;
+            grouped[date].forEach(t => {
+                const isSent = t.type === 'sent';
+                const icon = isSent ? '📤' : '📥';
+                const amountClass = isSent ? 'sent' : 'received';
+                const amountPrefix = isSent ? '- ₱' : '+ ₱';
+                html += `
+                    <div class="transaction-item">
+                        <div class="transaction-icon ${amountClass}">${icon}</div>
+                        <div class="transaction-details-hist">
+                            <div class="transaction-name-hist">${t.otherParty || 'Transaction'}</div>
+                            <div class="transaction-message-hist">${t.message || ''}</div>
+                        </div>
+                        <div class="transaction-amount-hist ${amountClass}">
+                            ${amountPrefix}${t.amount.toLocaleString()}
+                            <div class="transaction-time-hist">${t.time}</div>
+                        </div>
+                    </div>
+                `;
+            });
+            html += `</div>`;
+        });
+        
+        historyList.innerHTML = html;
+        
+    } catch (error) {
+        console.error("Error loading transaction history:", error);
+    }
+}
+
+// ========== CHECK DAILY SPENDING ==========
+async function checkDailySpending() {
+    try {
+        const response = await fetch(`${API_URL}/daily-spending/${currentUserId}`);
+        const data = await response.json();
+        
+        if (data.totalSpent > 0) {
+            console.log(`Today's spending: ₱${data.totalSpent.toLocaleString()} (${data.transactionCount} transactions)`);
+        }
+        return data;
+    } catch (error) {
+        console.error("Error checking daily spending:", error);
+    }
+}
+
+// ========== UPDATE loadDashboard to include notifications ==========
+// Add this line inside your existing loadDashboard function:
+async function loadDashboard() {
+    try {
+        // ... existing code ...
+        
+        // Add these lines:
+        await loadNotifications();
+        await checkDailySpending();
+        
+        // ... rest of existing code ...
+    } catch (error) {
+        console.error("Error loading dashboard:", error);
+    }
+}
+
+// ========== UPDATE loadTransactionHistory when history page opens ==========
+// Modify showHistory function:
+function showHistory() {
+    dashboardPage?.classList.add('hidden');
+    payBillsPage?.classList.add('hidden');
+    transferPage?.classList.add('hidden');
+    confirmationPage?.classList.add('hidden');
+    reviewPage?.classList.add('hidden');
+    successPage?.classList.add('hidden');
+    eventsPage?.classList.add('hidden');
+    profilePage?.classList.add('hidden');
+    notificationsPage?.classList.add('hidden');
+    settingsPage?.classList.add('hidden');
+    refundPage?.classList.add('hidden');
+    refundConfirmationPage?.classList.add('hidden');
+    historyPage?.classList.remove('hidden');
+    if (banner) banner.textContent = 'QCU HISTORY';
+    loadTransactionHistory(); // Load transactions when history page opens
+}
+// Initialize everything
+setupCategoryButtons();
+loadDashboard();
+loadSettings();
 </script>
 
 </body>
