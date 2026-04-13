@@ -4492,6 +4492,69 @@ async function loadTransactionHistory() {
         console.error("Error loading transaction history:", error);
     }
 }
+    // ========== SPENDING CHART ==========
+let spendingChart = null;
+
+async function updateSpendingChart() {
+    try {
+        const response = await fetch(`${API_URL}/transactions/${currentUserId}`);
+        const transactions = await response.json();
+        
+        // Filter only sent transactions (spending)
+        const spending = transactions.filter(t => t.type === 'sent');
+        
+        // Group by category
+        const categoryTotals = {};
+        spending.forEach(t => {
+            const category = t.category || 'Other';
+            categoryTotals[category] = (categoryTotals[category] || 0) + t.amount;
+        });
+        
+        const categories = Object.keys(categoryTotals);
+        const amounts = categories.map(c => categoryTotals[c]);
+        
+        // Colors for different categories
+        const colors = ['#667eea', '#f093fb', '#4facfe', '#43e97b', '#fa709a', '#30cfd0', '#a8edea', '#ff9a9e', '#f59e0b', '#ef4444'];
+        
+        const ctx = document.getElementById('spendingChart')?.getContext('2d');
+        if (!ctx) return;
+        
+        if (spendingChart) spendingChart.destroy();
+        
+        spendingChart = new Chart(ctx, {
+            type: 'pie',
+            data: {
+                labels: categories,
+                datasets: [{
+                    data: amounts,
+                    backgroundColor: colors.slice(0, categories.length),
+                    borderWidth: 0
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                plugins: {
+                    legend: { position: 'bottom', labels: { font: { size: 10 } } },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                const label = context.label || '';
+                                const value = context.raw || 0;
+                                const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                const percentage = ((value / total) * 100).toFixed(1);
+                                return `${label}: ₱${value.toLocaleString()} (${percentage}%)`;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+        
+    } catch (error) {
+        console.error("Error updating spending chart:", error);
+    }
+}
 
 // ========== CHECK DAILY SPENDING ==========
 async function checkDailySpending() {
