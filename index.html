@@ -2504,6 +2504,74 @@ input:checked + .toggle-slider:before {
     background: #dc3545;
     color: white;
 }
+    /* Custom Prompt Modal */
+.prompt-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10002;
+}
+
+.prompt-modal-content {
+    background: white;
+    border-radius: 12px;
+    width: 90%;
+    max-width: 400px;
+    overflow: hidden;
+    animation: modalSlideIn 0.2s ease;
+}
+
+.prompt-modal-header {
+    background: #667eea;
+    color: white;
+    padding: 15px 20px;
+    font-weight: bold;
+}
+
+.prompt-modal-body {
+    padding: 20px;
+}
+
+.prompt-modal-body input, .prompt-modal-body textarea {
+    width: 100%;
+    padding: 12px;
+    border: 2px solid #ddd;
+    border-radius: 8px;
+    font-size: 14px;
+    margin-top: 10px;
+}
+
+.prompt-modal-footer {
+    padding: 15px 20px;
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+    border-top: 1px solid #eee;
+}
+
+.prompt-btn-cancel, .prompt-btn-ok {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: bold;
+}
+
+.prompt-btn-cancel {
+    background: #6c757d;
+    color: white;
+}
+
+.prompt-btn-ok {
+    background: #667eea;
+    color: white;
+}
 </style>
 </head>
 
@@ -3358,7 +3426,91 @@ if (!currentUserId) {
 function formatCurrency(amount) {
     return `₱${parseFloat(amount).toLocaleString(undefined, {minimumFractionDigits: 2})}`;
 }
+// ========== CUSTOM PROMPT MODAL ==========
+function showPrompt(message, defaultValue = '', isTextarea = false) {
+    return new Promise((resolve) => {
+        const existingModal = document.querySelector('.prompt-modal');
+        if (existingModal) existingModal.remove();
+        
+        const modal = document.createElement('div');
+        modal.className = 'prompt-modal';
+        modal.innerHTML = `
+            <div class="prompt-modal-content">
+                <div class="prompt-modal-header">
+                    <span>📝 ${message}</span>
+                </div>
+                <div class="prompt-modal-body">
+                    ${isTextarea ? 
+                        `<textarea id="promptInput" rows="3" placeholder="Enter your response...">${defaultValue}</textarea>` :
+                        `<input type="text" id="promptInput" value="${defaultValue}" placeholder="Enter value...">`
+                    }
+                </div>
+                <div class="prompt-modal-footer">
+                    <button class="prompt-btn-cancel">Cancel</button>
+                    <button class="prompt-btn-ok">OK</button>
+                </div>
+            </div>
+        `;
+        
+        document.body.appendChild(modal);
+        const input = modal.querySelector('#promptInput');
+        input.focus();
+        
+        modal.querySelector('.prompt-btn-cancel').onclick = () => {
+            modal.remove();
+            resolve(null);
+        };
+        
+        modal.querySelector('.prompt-btn-ok').onclick = () => {
+            const value = input.value;
+            modal.remove();
+            resolve(value);
+        };
+        
+        input.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                modal.querySelector('.prompt-btn-ok').click();
+            }
+        });
+    });
+}
 
+// ========== CUSTOM CONFIRM MODAL (replaces confirm()) ==========
+function showCustomConfirm(message) {
+    return new Promise((resolve) => {
+        const existingModal = document.querySelector('.confirm-modal');
+        if (existingModal) existingModal.remove();
+        
+        const modal = document.createElement('div');
+        modal.className = 'confirm-modal';
+        modal.innerHTML = `
+            <div class="confirm-modal-content">
+                <div class="confirm-modal-header">
+                    <span>⚠️ Confirm Action</span>
+                </div>
+                <div class="confirm-modal-body">
+                    <p>${message}</p>
+                </div>
+                <div class="confirm-modal-footer">
+                    <button class="confirm-btn-cancel">No</button>
+                    <button class="confirm-btn-ok">Yes</button>
+                </div>
+            </div>
+        `;
+        
+        document.body.appendChild(modal);
+        
+        modal.querySelector('.confirm-btn-cancel').onclick = () => {
+            modal.remove();
+            resolve(false);
+        };
+        
+        modal.querySelector('.confirm-btn-ok').onclick = () => {
+            modal.remove();
+            resolve(true);
+        };
+    });
+}
 // ========== LOAD DASHBOARD DATA ==========
 async function loadDashboard() {
     try {
@@ -3896,7 +4048,7 @@ async function executeTransfer(amount, message) {
 }
 
 // Student Bills Category Buttons
-function setupCategoryButtons() {
+async function setupCategoryButtons() {
     const categoriesGrid = document.querySelector('.categories-grid');
     if (categoriesGrid) {
         categoriesGrid.innerHTML = '';
@@ -3905,9 +4057,11 @@ function setupCategoryButtons() {
             btn.className = 'category-btn';
             btn.textContent = bill.name;
             btn.addEventListener('click', async () => {
-                const amount = parseFloat(prompt(`Enter amount to pay for ${bill.name}:`, "500"));
+                const amountInput = await showPrompt(`Enter amount to pay for ${bill.name}:`, "500");
+                const amount = parseFloat(amountInput);
                 if (amount && !isNaN(amount)) {
-                    const reference = prompt("Enter reference number (optional):", "STU-" + Math.floor(Math.random() * 10000));
+                   let reference = await showPrompt("Enter reference number (optional):", "STU-" + Math.floor(Math.random() * 10000));
+                    if (!reference) reference = "STU-" + Math.floor(Math.random() * 10000);
                     await payBill(bill.category, amount, reference);
                 }
             });
@@ -3918,9 +4072,10 @@ function setupCategoryButtons() {
 
 // Edit Profile
 document.getElementById('editInfoBtn')?.addEventListener('click', async () => {
-    const newName = prompt('Enter new full name:', document.getElementById('profileFullName')?.textContent);
-    const newAddress = prompt('Enter new address:', document.getElementById('profileAddress')?.textContent);
-    const newClass = prompt('Enter your class/year:', document.getElementById('profileClass')?.textContent);
+    const newName = await showPrompt('Enter new full name:', document.getElementById('profileFullName')?.textContent);
+    if (!newName) return;
+    const newAddress = await showPrompt('Enter new address:', document.getElementById('profileAddress')?.textContent);
+    const newClass = await showPrompt('Enter your class/year:', document.getElementById('profileClass')?.textContent);
     
     if (newName || newAddress || newClass) {
         try {
@@ -3940,14 +4095,14 @@ document.getElementById('editInfoBtn')?.addEventListener('click', async () => {
 // Settings handlers
 document.getElementById('saveSettingsBtn')?.addEventListener('click', saveSettings);
 document.getElementById('changePasswordBtn')?.addEventListener('click', async () => {
-    const currentPassword = prompt("Enter current password:");
+    const currentPassword = await showPrompt("Enter current password:");
     if (!currentPassword) return;
-    const newPassword = prompt("Enter new password (min 6 characters):");
+    const newPassword = await showPrompt("Enter new password (min 6 characters):");
     if (!newPassword || newPassword.length < 6) {
-        showToast("Password must be at least 6 characters", 'error')
+        showToast("Password must be at least 6 characters", 'error');
         return;
     }
-    const confirmPassword = prompt("Confirm new password:");
+const confirmPassword = await showPrompt("Confirm new password:");
     if (newPassword !== confirmPassword) {
         showToast("Passwords don't match", 'error')
         return;
@@ -3966,9 +4121,9 @@ document.getElementById('changePasswordBtn')?.addEventListener('click', async ()
 });
 
 document.getElementById('changeEmailBtn')?.addEventListener('click', async () => {
-    const newEmail = prompt("Enter new email address:");
+    const newEmail = await showPrompt("Enter new email address:");
     if (!newEmail) return;
-    const password = prompt("Enter your password to confirm:");
+    const password = await showPrompt("Enter your password to confirm:");
     if (!password) return;
     try {
         const response = await fetch(`${API_URL}/change-email/${currentUserId}`, {
@@ -3989,9 +4144,9 @@ document.getElementById('changeEmailBtn')?.addEventListener('click', async () =>
 });
 
 document.getElementById('deleteAccountBtn')?.addEventListener('click', async () => {
-    const confirm = prompt("Type 'DELETE' to confirm account deletion:");
-    if (confirm !== "DELETE") return;
-    const password = prompt("Enter your password to confirm:");
+    const confirmText = await showPrompt("Type 'DELETE' to confirm account deletion:");
+    if (confirmText !== "DELETE") return;
+    const password = await showPrompt("Enter your password to confirm:");
     if (!password) return;
     try {
         const response = await fetch(`${API_URL}/delete-account/${currentUserId}`, {
@@ -4047,8 +4202,9 @@ document.getElementById('submitRefundBtn')?.addEventListener('click', () => {
 });
 
 // Logout
-document.getElementById('logoutBtn')?.addEventListener('click', () => {
-    if (confirm('Are you sure you want to logout?')) {
+document.getElementById('logoutBtn')?.addEventListener('click', async () => {
+    const confirmed = await showCustomConfirm('Are you sure you want to logout?');
+    if (confirmed) {
         localStorage.clear();
         window.location.href = "Login.html";
     }
