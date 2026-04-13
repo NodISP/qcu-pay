@@ -3522,10 +3522,9 @@ async function loadDashboard() {
             if (el) el.textContent = balanceAmount;
         });
 
-        // This updates the Current Balance box
-document.querySelectorAll('.balance .box:first-child .amount').forEach(el => {
-    if (el) el.textContent = balanceAmount;
-});
+        document.querySelectorAll('.balance .box:first-child .amount').forEach(el => {
+            if (el) el.textContent = balanceAmount;
+        });
         
         const greetingEl = document.querySelector('.greeting h2');
         if (greetingEl) greetingEl.textContent = `Good day, ${balanceData.username || 'Student'}!`;
@@ -3536,6 +3535,20 @@ document.querySelectorAll('.balance .box:first-child .amount').forEach(el => {
         
         const transactionsRes = await fetch(`${API_URL}/transactions/${currentUserId}`);
         const transactions = await transactionsRes.json();
+        
+        // ========== NET CHANGE CALCULATION (MOVED INSIDE) ==========
+        const today = new Date().toISOString().split('T')[0];
+        const todayReceived = transactions.filter(t => t.date === today && t.type === 'received').reduce((sum, t) => sum + t.amount, 0);
+        const todaySent = transactions.filter(t => t.date === today && t.type === 'sent').reduce((sum, t) => sum + t.amount, 0);
+        const netChange = todayReceived - todaySent;
+        
+        const netChangeEl = document.getElementById('netChangeToday');
+        if (netChangeEl) {
+            const prefix = netChange >= 0 ? '+' : '-';
+            netChangeEl.textContent = `${prefix} ${formatCurrency(Math.abs(netChange))}`;
+            netChangeEl.style.color = netChange >= 0 ? '#28a745' : '#dc3545';
+        }
+        // ========== END NET CHANGE ==========
         
         const activityDiv = document.querySelector('.activity');
         if (activityDiv && transactions.length) {
@@ -3571,24 +3584,12 @@ document.querySelectorAll('.balance .box:first-child .amount').forEach(el => {
         const emailSpan = document.querySelector('.profile-detail-value');
         if (emailSpan) emailSpan.textContent = user.email;
 
-         await loadNotifications();
+        await loadNotifications();
         await checkDailySpending();
         
     } catch (error) {
         console.error("Error loading dashboard:", error);
     }
-}
-    // Calculate net change today (received - sent)
-const today = new Date().toISOString().split('T')[0];
-const todayReceived = transactions.filter(t => t.date === today && t.type === 'received').reduce((sum, t) => sum + t.amount, 0);
-const todaySent = transactions.filter(t => t.date === today && t.type === 'sent').reduce((sum, t) => sum + t.amount, 0);
-const netChange = todayReceived - todaySent;
-
-const netChangeEl = document.getElementById('netChangeToday');
-if (netChangeEl) {
-    const prefix = netChange >= 0 ? '+' : '-';
-    netChangeEl.textContent = `${prefix} ${formatCurrency(Math.abs(netChange))}`;
-    netChangeEl.style.color = netChange >= 0 ? '#28a745' : '#dc3545';
 }
 // ========== CUSTOM TOAST NOTIFICATION ==========
 function showToast(message, type = 'info', duration = 3000) {
