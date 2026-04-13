@@ -6,6 +6,7 @@
 <title>QCU Dashboard</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
     
 <style>
 /* ===== RESET ===== */
@@ -2693,6 +2694,149 @@ input:checked + .toggle-slider:before {
     margin-bottom: 15px;
     text-align: center;
 }
+    /* QR Code Modal */
+.qr-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.8);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 20000;
+}
+
+.qr-modal-content {
+    background: white;
+    border-radius: 20px;
+    width: 90%;
+    max-width: 400px;
+    padding: 25px;
+    text-align: center;
+    animation: modalSlideIn 0.3s ease;
+}
+
+.qr-modal-header {
+    font-size: 20px;
+    font-weight: bold;
+    margin-bottom: 20px;
+    color: #333;
+}
+
+.qr-code-container {
+    background: white;
+    padding: 20px;
+    border-radius: 12px;
+    margin: 10px 0;
+    display: flex;
+    justify-content: center;
+}
+
+.qr-code-container canvas, .qr-code-container img {
+    width: 200px;
+    height: 200px;
+}
+
+.qr-code-text {
+    margin: 15px 0;
+    padding: 10px;
+    background: #f5f5f5;
+    border-radius: 8px;
+    font-family: monospace;
+    font-size: 14px;
+    word-break: break-all;
+}
+
+.qr-buttons {
+    display: flex;
+    gap: 10px;
+    margin-top: 15px;
+}
+
+.qr-btn {
+    flex: 1;
+    padding: 12px;
+    border: none;
+    border-radius: 8px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: transform 0.2s;
+}
+
+.qr-btn-primary {
+    background: #667eea;
+    color: white;
+}
+
+.qr-btn-secondary {
+    background: #6c757d;
+    color: white;
+}
+
+.qr-btn-success {
+    background: #28a745;
+    color: white;
+}
+
+.qr-btn:hover {
+    transform: translateY(-2px);
+}
+
+.qr-close {
+    background: #dc3545;
+    color: white;
+    margin-top: 10px;
+}
+
+/* Scan QR Modal */
+.scan-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.9);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 20001;
+}
+
+.scan-modal-content {
+    background: white;
+    border-radius: 20px;
+    width: 90%;
+    max-width: 500px;
+    padding: 25px;
+    text-align: center;
+}
+
+.scan-input {
+    width: 100%;
+    padding: 15px;
+    font-size: 16px;
+    border: 2px solid #ddd;
+    border-radius: 10px;
+    margin: 15px 0;
+    text-align: center;
+    font-family: monospace;
+}
+
+.scan-preview {
+    width: 100%;
+    height: 300px;
+    background: #333;
+    border-radius: 10px;
+    margin: 10px 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 14px;
+}
 </style>
 </head>
 
@@ -2743,16 +2887,17 @@ input:checked + .toggle-slider:before {
                             <div class="amount" id="netChangeToday" style="color: #28a745;">₱0.00</div>
                         </div>
                     </div>
-                    <div class="progress">
-    <h3>Spending by Category</h3>
-    <canvas id="spendingChart" width="200" height="200"></canvas>
-    <div id="chartLegend" style="margin-top: 15px; font-size: 12px;"></div>
+                    <div class="progress-section">
+    <div class="progress">
+        <h3>Spending by Category</h3>
+        <canvas id="spendingChart" width="200" height="200"></canvas>
+        <div id="chartLegend" style="margin-top: 15px; font-size: 12px;"></div>
+    </div>
+    <div class="quickpay">
+        <h3>Quickpay</h3>
+        <p>🍽️</p>
+    </div>
 </div>
-                        <div class="quickpay">
-                            <h3>Quickpay</h3>
-                            <p>🍽️</p>
-                        </div>
-                    </div>
                 </div>
                 <div class="middle-panel">
                     <div class="actions">
@@ -2857,11 +3002,11 @@ input:checked + .toggle-slider:before {
                     </div>
                     <div class="qr-section">
                         <div class="qr-placeholder" id="qrPlaceholder">
-                            <span>QR Code</span>
+                            <span>📱 QR Code</span>
                         </div>
-                        <div class="qr-text">Click to scan QR code</div>
+                        <div class="qr-text">Click to send or receive money via QR</div>
+                        </div>
                     </div>
-                </div>
                 <div class="back-button">
                     <button class="back-to-dashboard" id="backFromTransferBtn">← Back to Dashboard</button>
                 </div>
@@ -4717,10 +4862,203 @@ function showEvents() {
 // Add scroll button event listeners
 document.getElementById('scrollLeftBtn')?.addEventListener('click', scrollEventsLeft);
 document.getElementById('scrollRightBtn')?.addEventListener('click', scrollEventsRight);
+// ========== QR CODE FUNCTIONALITY ==========
 
+// Generate QR Code for receiving payments
+function showMyQRCode() {
+    // Create user data for QR
+    const userData = JSON.stringify({
+        type: 'payment_request',
+        userId: currentUserId,
+        name: localStorage.getItem('username') || 'QCU User',
+        email: currentUserEmail
+    });
+    
+    const modal = document.createElement('div');
+    modal.className = 'qr-modal';
+    modal.innerHTML = `
+        <div class="qr-modal-content">
+            <div class="qr-modal-header">📱 My QR Code</div>
+            <div class="qr-code-container" id="qrCodeContainer"></div>
+            <div class="qr-code-text" id="qrCodeText">${userData}</div>
+            <div class="qr-buttons">
+                <button class="qr-btn qr-btn-secondary" id="copyCodeBtn">📋 Copy Code</button>
+                <button class="qr-btn qr-btn-primary" id="shareCodeBtn">📤 Share</button>
+            </div>
+            <div class="qr-buttons">
+                <button class="qr-btn qr-btn-success" id="enterCodeBtn">🔢 Enter Code Manually</button>
+                <button class="qr-btn qr-close" id="closeQRModal">Close</button>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+    
+    // Generate QR code
+    new QRCode(document.getElementById("qrCodeContainer"), {
+        text: userData,
+        width: 200,
+        height: 200,
+        colorDark: "#000000",
+        colorLight: "#ffffff",
+        correctLevel: QRCode.CorrectLevel.H
+    });
+    
+    // Copy code button
+    document.getElementById('copyCodeBtn')?.addEventListener('click', () => {
+        navigator.clipboard.writeText(userData);
+        showToast('Code copied to clipboard!', 'success');
+    });
+    
+    // Share button
+    document.getElementById('shareCodeBtn')?.addEventListener('click', () => {
+        if (navigator.share) {
+            navigator.share({
+                title: 'QCU Pay Payment Request',
+                text: userData
+            });
+        } else {
+            showToast('Share not supported on this device', 'info');
+        }
+    });
+    
+    // Enter code manually
+    document.getElementById('enterCodeBtn')?.addEventListener('click', () => {
+        modal.remove();
+        showManualCodeEntry();
+    });
+    
+    document.getElementById('closeQRModal')?.addEventListener('click', () => modal.remove());
+}
+
+// Show manual code entry for scanning
+function showManualCodeEntry() {
+    const modal = document.createElement('div');
+    modal.className = 'scan-modal';
+    modal.innerHTML = `
+        <div class="scan-modal-content">
+            <div class="qr-modal-header">🔢 Enter Payment Code</div>
+            <p>Paste or type the code shared by the person you want to pay:</p>
+            <input type="text" class="scan-input" id="paymentCodeInput" placeholder="Paste code here...">
+            <div class="qr-buttons">
+                <button class="qr-btn qr-btn-primary" id="processPaymentBtn">💸 Process Payment</button>
+                <button class="qr-btn qr-close" id="closeScanModal">Cancel</button>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+    
+    document.getElementById('processPaymentBtn')?.addEventListener('click', async () => {
+        const code = document.getElementById('paymentCodeInput')?.value;
+        if (!code) {
+            showToast('Please enter a code', 'error');
+            return;
+        }
+        
+        try {
+            const userData = JSON.parse(code);
+            if (userData.type === 'payment_request' && userData.userId) {
+                modal.remove();
+                // Show payment dialog to send money
+                const amount = await showPrompt(`Enter amount to send to ${userData.name || 'user'}:`, "100");
+                if (amount && parseFloat(amount) > 0) {
+                    const result = await performTransfer(userData.email, amount, 'Payment via QR Code');
+                    if (result.success) {
+                        showToast(`Sent ₱${amount} to ${userData.name}!`, 'success');
+                        loadDashboard();
+                    } else {
+                        showToast(result.error, 'error');
+                    }
+                }
+            } else {
+                showToast('Invalid payment code', 'error');
+            }
+        } catch (e) {
+            showToast('Invalid code format', 'error');
+        }
+    });
+    
+    document.getElementById('closeScanModal')?.addEventListener('click', () => modal.remove());
+}
+
+// Scan QR from camera (simplified - opens file picker for demo)
+function showScanQRCode() {
+    const modal = document.createElement('div');
+    modal.className = 'scan-modal';
+    modal.innerHTML = `
+        <div class="scan-modal-content">
+            <div class="qr-modal-header">📷 Scan QR Code</div>
+            <div class="scan-preview">
+                📸 Camera preview would appear here<br>Select an image with QR code instead
+            </div>
+            <input type="file" id="qrImageInput" accept="image/*" style="margin: 10px 0; padding: 10px;">
+            <div class="qr-buttons">
+                <button class="qr-btn qr-btn-secondary" id="manualCodeBtn">🔢 Enter Code Manually</button>
+                <button class="qr-btn qr-close" id="closeScanModal">Cancel</button>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+    
+    document.getElementById('qrImageInput')?.addEventListener('change', async (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            // For demo, show a message - real QR reading requires additional library
+            showToast('QR reading from image would process here. For demo, use "Enter Code"', 'info');
+            modal.remove();
+            showManualCodeEntry();
+        }
+    });
+    
+    document.getElementById('manualCodeBtn')?.addEventListener('click', () => {
+        modal.remove();
+        showManualCodeEntry();
+    });
+    
+    document.getElementById('closeScanModal')?.addEventListener('click', () => modal.remove());
+}
+
+// Update QR Placeholder click handler
+function setupQRCode() {
+    const qrPlaceholder = document.getElementById('qrPlaceholder');
+    if (qrPlaceholder) {
+        qrPlaceholder.onclick = () => {
+            // Create modal with options
+            const modal = document.createElement('div');
+            modal.className = 'qr-modal';
+            modal.innerHTML = `
+                <div class="qr-modal-content">
+                    <div class="qr-modal-header">📱 QR Code Options</div>
+                    <div class="qr-buttons" style="flex-direction: column;">
+                        <button class="qr-btn qr-btn-primary" id="showMyQrBtn">📱 Show My QR Code (Receive Money)</button>
+                        <button class="qr-btn qr-btn-success" id="scanQrBtn">📷 Scan QR Code (Send Money)</button>
+                        <button class="qr-btn qr-close" id="closeOptionsBtn">Close</button>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(modal);
+            
+            document.getElementById('showMyQrBtn')?.addEventListener('click', () => {
+                modal.remove();
+                showMyQRCode();
+            });
+            
+            document.getElementById('scanQrBtn')?.addEventListener('click', () => {
+                modal.remove();
+                showScanQRCode();
+            });
+            
+            document.getElementById('closeOptionsBtn')?.addEventListener('click', () => modal.remove());
+        };
+    }
+}
+    
 // Initialize everything
 setupCategoryButtons();
 loadDashboard();
+setupQRCode();
 loadSettings();
 </script>
 
