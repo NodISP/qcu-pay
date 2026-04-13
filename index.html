@@ -3530,6 +3530,38 @@ if (!currentUserId) {
 function formatCurrency(amount) {
     return `₱${parseFloat(amount).toLocaleString(undefined, {minimumFractionDigits: 2})}`;
 }
+
+// ========== CUSTOM TOAST NOTIFICATION ==========
+function showToast(message, type = 'info', duration = 3000) {
+    const existingToast = document.querySelector('.toast-notification');
+    if (existingToast) existingToast.remove();
+    
+    const toast = document.createElement('div');
+    toast.className = 'toast-notification';
+    toast.innerHTML = `
+        <div class="toast-header ${type}">
+            <span>${type === 'success' ? '✅' : type === 'error' ? '❌' : type === 'warning' ? '⚠️' : 'ℹ️'} ${type.toUpperCase()}</span>
+            <button class="toast-close">&times;</button>
+        </div>
+        <div class="toast-body">${message}</div>
+        <div class="toast-progress"></div>
+    `;
+    
+    document.body.appendChild(toast);
+    
+    toast.querySelector('.toast-close').onclick = () => {
+        toast.classList.add('hide');
+        setTimeout(() => toast.remove(), 400);
+    };
+    
+    setTimeout(() => {
+        if (toast.parentNode) {
+            toast.classList.add('hide');
+            setTimeout(() => toast.remove(), 400);
+        }
+    }, duration);
+}
+
 // ========== CUSTOM PROMPT MODAL ==========
 function showPrompt(message, defaultValue = '', isTextarea = false) {
     return new Promise((resolve) => {
@@ -3579,7 +3611,7 @@ function showPrompt(message, defaultValue = '', isTextarea = false) {
     });
 }
 
-// ========== CUSTOM CONFIRM MODAL (replaces confirm()) ==========
+// ========== CUSTOM CONFIRM MODAL ==========
 function showCustomConfirm(message) {
     return new Promise((resolve) => {
         const existingModal = document.querySelector('.confirm-modal');
@@ -3615,6 +3647,279 @@ function showCustomConfirm(message) {
         };
     });
 }
+
+// ========== CONFIRMATION DIALOG ==========
+function showConfirmDialog(message, onConfirm, onCancel) {
+    const existingModal = document.querySelector('.confirm-modal');
+    if (existingModal) existingModal.remove();
+    
+    const modal = document.createElement('div');
+    modal.className = 'confirm-modal';
+    modal.innerHTML = `
+        <div class="confirm-modal-content">
+            <div class="confirm-modal-header">
+                <span>⚠️ Confirm Transaction</span>
+            </div>
+            <div class="confirm-modal-body">
+                <p>${message}</p>
+                <p style="font-size: 12px; color: #ff9800; margin-top: 10px;">Are you sure you want to continue?</p>
+            </div>
+            <div class="confirm-modal-footer">
+                <button class="confirm-btn-cancel">Cancel</button>
+                <button class="confirm-btn-ok">Yes, Continue</button>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+    
+    modal.querySelector('.confirm-btn-cancel').onclick = () => {
+        modal.remove();
+        if (onCancel) onCancel();
+    };
+    
+    modal.querySelector('.confirm-btn-ok').onclick = () => {
+        modal.remove();
+        if (onConfirm) onConfirm();
+    };
+}
+
+// ========== NOTIFICATIONS SYSTEM ==========
+async function loadNotifications() {
+    try {
+        const response = await fetch(`${API_URL}/notifications/${currentUserId}`);
+        const notifications = await response.json();
+        
+        const sidebarNotification = document.querySelector('.notifications');
+        if (sidebarNotification) {
+            if (notifications && notifications.length > 0) {
+                let html = '<h3>🔔 Recent Alerts</h3>';
+                notifications.slice(0, 3).forEach(n => {
+                    html += `
+                        <div style="padding: 10px; margin-bottom: 8px; background: ${n.type === 'critical' ? '#ffebee' : '#fff3cd'}; border-radius: 8px; border-left: 4px solid ${n.type === 'critical' ? '#dc3545' : '#ffc107'};">
+                            <strong style="font-size: 12px;">${n.title}</strong>
+                            <div style="font-size: 11px;">${n.message}</div>
+                            <div style="font-size: 10px; color: #999; margin-top: 5px;">${n.time}</div>
+                        </div>
+                    `;
+                });
+                sidebarNotification.innerHTML = html;
+            } else {
+                sidebarNotification.innerHTML = '<h3>🔔 Notifications</h3><div style="padding: 15px; text-align: center; color: #999;">No new alerts</div>';
+            }
+        }
+        
+        const transactionsRes = await fetch(`${API_URL}/transactions/${currentUserId}`);
+        const transactions = await transactionsRes.json();
+        
+        const fullNotificationList = document.getElementById('notificationsList');
+        if (fullNotificationList) {
+            const alerts = notifications || [];
+            const groupedTransactions = {};
+            transactions.forEach(t => {
+                if (!groupedTransactions[t.date]) groupedTransactions[t.date] = [];
+                groupedTransactions[t.date].push(t);
+            });
+            
+            const sortedDates = Object.keys(groupedTransactions).sort().reverse();
+            let html = '';
+            
+            if (alerts.length > 0) {
+                html += `<div class="notification-section"><div class="section-title">⚠️ ALERTS</div>`;
+                alerts.forEach(n => {
+                    html += `
+                        <div class="notification-item" style="background: ${n.type === 'critical' ? '#ffebee' : '#fff3cd'}; border-left: 4px solid ${n.type === 'critical' ? '#dc3545' : '#ffc107'};">
+                            <div class="notification-icon">${n.type === 'critical' ? '🔴' : '⚠️'}</div>
+                            <div class="notification-text">
+                                <div class="notification-title">${n.title}</div>
+                                <div class="notification-desc">${n.message}</div>
+                                <div class="notification-time">${n.time}</div>
+                            </div>
+                        </div>
+                    `;
+                });
+                html += `</div>`;
+            }
+            
+            if (sortedDates.length > 0) {
+                html += `<div class="notification-section"><div class="section-title">📜 TRANSACTION HISTORY</div>`;
+                for (const date of sortedDates) {
+                    const dateObj = new Date(date);
+                    const formattedDate = dateObj.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+                    html += `<div style="margin-top: 15px; margin-bottom: 10px; padding: 8px 12px; background: #667eea; color: white; border-radius: 8px; font-weight: bold;">📅 ${formattedDate}</div>`;
+                    
+                    groupedTransactions[date].forEach(t => {
+                        const isSent = t.type === 'sent';
+                        const icon = isSent ? '📤' : '📥';
+                        const amountColor = isSent ? '#dc3545' : '#28a745';
+                        const amountPrefix = isSent ? '-₱' : '+₱';
+                        html += `
+                            <div class="notification-item" onclick="alert('Transaction Details:\\nTo/From: ${t.otherParty}\\nAmount: ${amountPrefix}${t.amount.toLocaleString()}\\nMessage: ${t.message || 'No message'}')">
+                                <div class="notification-icon">${icon}</div>
+                                <div class="notification-text">
+                                    <div class="notification-title">${t.otherParty || 'Transaction'}</div>
+                                    <div class="notification-desc">${t.message || 'No message'}</div>
+                                    <div class="notification-time">${t.time}</div>
+                                </div>
+                                <div style="font-weight: bold; color: ${amountColor};">${amountPrefix}${t.amount.toLocaleString()}</div>
+                            </div>
+                        `;
+                    });
+                }
+                html += `</div>`;
+            }
+            
+            if (html === '') {
+                fullNotificationList.innerHTML = '<div style="padding: 40px; text-align: center; color: #999;">🔔 No notifications or transactions yet.<br>Your activity will appear here.</div>';
+            } else {
+                fullNotificationList.innerHTML = html;
+            }
+        }
+    } catch (error) {
+        console.error("Error loading notifications:", error);
+        const fullNotificationList = document.getElementById('notificationsList');
+        if (fullNotificationList) {
+            fullNotificationList.innerHTML = '<div style="padding: 40px; text-align: center; color: #999;">⚠️ Error loading notifications</div>';
+        }
+    }
+}
+
+// ========== LOAD TRANSACTION HISTORY ==========
+async function loadTransactionHistory() {
+    try {
+        const response = await fetch(`${API_URL}/transactions/${currentUserId}`);
+        const transactions = await response.json();
+        
+        const historyList = document.getElementById('historyList');
+        if (!historyList) return;
+        
+        if (transactions.length === 0) {
+            historyList.innerHTML = '<div class="empty-history"><div class="empty-history-icon">📭</div><h3>No Transactions Yet</h3><p>Your transactions will appear here</p></div>';
+            return;
+        }
+        
+        const grouped = {};
+        transactions.forEach(t => {
+            if (!grouped[t.date]) grouped[t.date] = [];
+            grouped[t.date].push(t);
+        });
+        
+        let html = '';
+        Object.keys(grouped).sort().reverse().forEach(date => {
+            html += `<div class="date-group"><div class="date-header">📅 ${new Date(date).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</div>`;
+            grouped[date].forEach(t => {
+                const isSent = t.type === 'sent';
+                const icon = isSent ? '📤' : '📥';
+                const amountClass = isSent ? 'sent' : 'received';
+                const amountPrefix = isSent ? '- ₱' : '+ ₱';
+                html += `
+                    <div class="transaction-item">
+                        <div class="transaction-icon ${amountClass}">${icon}</div>
+                        <div class="transaction-details-hist">
+                            <div class="transaction-name-hist">${t.otherParty || 'Transaction'}</div>
+                            <div class="transaction-message-hist">${t.message || ''}</div>
+                        </div>
+                        <div class="transaction-amount-hist ${amountClass}">
+                            ${amountPrefix}${t.amount.toLocaleString()}
+                            <div class="transaction-time-hist">${t.time}</div>
+                        </div>
+                    </div>
+                `;
+            });
+            html += `</div>`;
+        });
+        
+        historyList.innerHTML = html;
+    } catch (error) {
+        console.error("Error loading transaction history:", error);
+    }
+}
+
+// ========== CHECK DAILY SPENDING ==========
+async function checkDailySpending() {
+    try {
+        const response = await fetch(`${API_URL}/daily-spending/${currentUserId}`);
+        const data = await response.json();
+        if (data.totalSpent > 0) {
+            console.log(`Today's spending: ₱${data.totalSpent.toLocaleString()} (${data.transactionCount} transactions)`);
+        }
+        return data;
+    } catch (error) {
+        console.error("Error checking daily spending:", error);
+    }
+}
+
+// ========== SPENDING CHART ==========
+let spendingChart = null;
+
+async function updateSpendingChart() {
+    try {
+        const response = await fetch(`${API_URL}/transactions/${currentUserId}`);
+        const transactions = await response.json();
+        
+        const spending = transactions.filter(t => t.type === 'sent');
+        
+        if (spending.length === 0) {
+            const ctx = document.getElementById('spendingChart')?.getContext('2d');
+            if (ctx) {
+                if (spendingChart) spendingChart.destroy();
+                ctx.clearRect(0, 0, 200, 200);
+                ctx.font = '12px Arial';
+                ctx.fillStyle = '#999';
+                ctx.fillText('No spending yet', 60, 100);
+            }
+            return;
+        }
+        
+        const categoryTotals = {};
+        spending.forEach(t => {
+            const category = t.category || 'Other';
+            categoryTotals[category] = (categoryTotals[category] || 0) + t.amount;
+        });
+        
+        const categories = Object.keys(categoryTotals);
+        const amounts = categories.map(c => categoryTotals[c]);
+        const colors = ['#667eea', '#f093fb', '#4facfe', '#43e97b', '#fa709a', '#30cfd0', '#a8edea', '#ff9a9e', '#f59e0b', '#ef4444'];
+        
+        const ctx = document.getElementById('spendingChart')?.getContext('2d');
+        if (!ctx) return;
+        
+        if (spendingChart) spendingChart.destroy();
+        
+        spendingChart = new Chart(ctx, {
+            type: 'pie',
+            data: {
+                labels: categories,
+                datasets: [{
+                    data: amounts,
+                    backgroundColor: colors.slice(0, categories.length),
+                    borderWidth: 0
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                plugins: {
+                    legend: { position: 'bottom', labels: { font: { size: 10 } } },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                const label = context.label || '';
+                                const value = context.raw || 0;
+                                const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                const percentage = ((value / total) * 100).toFixed(1);
+                                return `${label}: ₱${value.toLocaleString()} (${percentage}%)`;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    } catch (error) {
+        console.error("Error updating spending chart:", error);
+    }
+}
+
 // ========== LOAD DASHBOARD DATA ==========
 async function loadDashboard() {
     try {
@@ -3642,7 +3947,6 @@ async function loadDashboard() {
         const transactionsRes = await fetch(`${API_URL}/transactions/${currentUserId}`);
         const transactions = await transactionsRes.json();
         
-        // ========== NET CHANGE CALCULATION (MOVED INSIDE) ==========
         const today = new Date().toISOString().split('T')[0];
         const todayReceived = transactions.filter(t => t.date === today && t.type === 'received').reduce((sum, t) => sum + t.amount, 0);
         const todaySent = transactions.filter(t => t.date === today && t.type === 'sent').reduce((sum, t) => sum + t.amount, 0);
@@ -3654,7 +3958,6 @@ async function loadDashboard() {
             netChangeEl.textContent = `${prefix} ${formatCurrency(Math.abs(netChange))}`;
             netChangeEl.style.color = netChange >= 0 ? '#28a745' : '#dc3545';
         }
-        // ========== END NET CHANGE ==========
         
         const activityDiv = document.querySelector('.activity');
         if (activityDiv && transactions.length) {
@@ -3698,39 +4001,7 @@ async function loadDashboard() {
         console.error("Error loading dashboard:", error);
     }
 }
-// ========== CUSTOM TOAST NOTIFICATION ==========
-function showToast(message, type = 'info', duration = 3000) {
-    // Remove existing toast
-    const existingToast = document.querySelector('.toast-notification');
-    if (existingToast) existingToast.remove();
-    
-    const toast = document.createElement('div');
-    toast.className = 'toast-notification';
-    toast.innerHTML = `
-        <div class="toast-header ${type}">
-            <span>${type === 'success' ? '✅' : type === 'error' ? '❌' : type === 'warning' ? '⚠️' : 'ℹ️'} ${type.toUpperCase()}</span>
-            <button class="toast-close">&times;</button>
-        </div>
-        <div class="toast-body">${message}</div>
-        <div class="toast-progress"></div>
-    `;
-    
-    document.body.appendChild(toast);
-    
-    // Close button
-    toast.querySelector('.toast-close').onclick = () => {
-        toast.classList.add('hide');
-        setTimeout(() => toast.remove(), 400);
-    };
-    
-    // Auto close
-    setTimeout(() => {
-        if (toast.parentNode) {
-            toast.classList.add('hide');
-            setTimeout(() => toast.remove(), 400);
-        }
-    }, duration);
-}
+
 // ========== LOAD USERS FOR TRANSFER ==========
 async function loadUsers() {
     try {
@@ -3778,7 +4049,6 @@ async function payBill(category, amount, accountNumber = null) {
         return false;
     }
     
-    // Show confirmation if amount > 500
     if (amount > 500) {
         showConfirmDialog(
             `You are about to pay ₱${amount.toLocaleString()} for ${category}. This exceeds ₱500.`,
@@ -3835,7 +4105,8 @@ const studentBills = [
     { name: "🚌 School Bus", category: "Transportation" },
     { name: "💻 Laptop/Tablet", category: "Device" }
 ];
-    // ========== ITEMS FOR EACH CATEGORY ==========
+
+// ========== ITEMS FOR EACH CATEGORY ==========
 const categoryItems = {
     "Tuition": [
         { name: "📚 1st Semester Tuition", price: 15000 },
@@ -3937,7 +4208,6 @@ function showItemsModal(category, categoryName) {
             const itemName = btn.dataset.name;
             modal.remove();
             
-            // Confirm purchase
             showConfirmDialog(
                 `Purchase ${itemName} for ₱${price.toLocaleString()}?`,
                 async () => {
@@ -3950,42 +4220,7 @@ function showItemsModal(category, categoryName) {
         });
     });
 }
-// ========== CONFIRMATION MODAL ==========
-function showConfirmDialog(message, onConfirm, onCancel) {
-    // Remove existing modal
-    const existingModal = document.querySelector('.confirm-modal');
-    if (existingModal) existingModal.remove();
-    
-    const modal = document.createElement('div');
-    modal.className = 'confirm-modal';
-    modal.innerHTML = `
-        <div class="confirm-modal-content">
-            <div class="confirm-modal-header">
-                <span>⚠️ Confirm Transaction</span>
-            </div>
-            <div class="confirm-modal-body">
-                <p>${message}</p>
-                <p style="font-size: 12px; color: #ff9800; margin-top: 10px;">Are you sure you want to continue?</p>
-            </div>
-            <div class="confirm-modal-footer">
-                <button class="confirm-btn-cancel">Cancel</button>
-                <button class="confirm-btn-ok">Yes, Continue</button>
-            </div>
-        </div>
-    `;
-    
-    document.body.appendChild(modal);
-    
-    modal.querySelector('.confirm-btn-cancel').onclick = () => {
-        modal.remove();
-        if (onCancel) onCancel();
-    };
-    
-    modal.querySelector('.confirm-btn-ok').onclick = () => {
-        modal.remove();
-        if (onConfirm) onConfirm();
-    };
-}
+
 // ========== SETTINGS FUNCTIONALITY ==========
 async function loadSettings() {
     try {
@@ -4021,9 +4256,9 @@ async function saveSettings() {
             body: JSON.stringify(settings)
         });
         
-        showToast('Settings saved!', 'success')
+        showToast('Settings saved!', 'success');
     } catch (error) {
-        showToast('Error saving settings', 'error')
+        showToast('Error saving settings', 'error');
     }
 }
 
@@ -4040,6 +4275,357 @@ async function performTransfer(recipientEmail, amount, message) {
         return await res.json();
     } catch (error) {
         return { success: false, error: error.message };
+    }
+}
+
+// ========== EVENTS LOADING FUNCTION ==========
+let allEvents = [];
+let currentEventIndex = 0;
+let eventsPerView = 3;
+
+async function loadEvents() {
+    try {
+        const response = await fetch(`${API_URL}/events`);
+        allEvents = await response.json();
+        renderEventsCards();
+        updateEventScroll();
+    } catch (error) {
+        console.error("Error loading events:", error);
+        allEvents = [
+            { id: 1, name: "🎵 Music Festival", date: "April 15, 2026", location: "Central Park", fee: 500, isFree: false, description: "Live bands, food trucks, and fun!" },
+            { id: 2, name: "💻 Tech Conference", date: "April 20, 2026", location: "Convention Center", fee: 1200, isFree: false, description: "Learn from industry experts" },
+            { id: 3, name: "🍔 Food Expo", date: "April 25, 2026", location: "Trade Hall", fee: 0, isFree: true, description: "Free food tasting!" },
+            { id: 4, name: "🎨 Art Exhibition", date: "May 1, 2026", location: "Art Museum", fee: 300, isFree: false, description: "Local artists showcase" },
+            { id: 5, name: "⚽ Sports Tournament", date: "May 5, 2026", location: "University Stadium", fee: 200, isFree: false, description: "Join or watch the games!" },
+            { id: 6, name: "💼 Business Summit", date: "May 10, 2026", location: "Business Center", fee: 1500, isFree: false, description: "Network with professionals" },
+            { id: 7, name: "🏃 Charity Run", date: "May 15, 2026", location: "City Streets", fee: 350, isFree: false, description: "Run for a cause" },
+            { id: 8, name: "🎬 Film Screening", date: "May 20, 2026", location: "Cinema Plaza", fee: 0, isFree: true, description: "Free movie night!" }
+        ];
+        renderEventsCards();
+        updateEventScroll();
+    }
+}
+
+function renderEventsCards() {
+    const container = document.getElementById('eventsCards');
+    if (!container) return;
+    
+    container.innerHTML = allEvents.map(event => {
+        const feeNumber = Number(event.fee) || 0;
+        const displayFee = feeNumber > 0 ? `₱${feeNumber.toLocaleString()}` : 'FREE';
+        return `
+        <div class="event-card" data-id="${event.id}" data-name="${event.name}" data-fee="${feeNumber}" data-free="${event.isFree}">
+            <div class="event-img">🎉 ${event.name.substring(0, 2)}</div>
+            <div class="event-details">
+                <div class="event-name">${event.name}</div>
+                <div class="event-date">📅 ${event.date}</div>
+                <div class="event-location">📍 ${event.location}</div>
+                <div class="event-fee ${event.isFree ? 'free' : 'paid'}">
+                    ${event.isFree ? '🎟️ FREE' : `💰 ${displayFee}`}
+                </div>
+                <div class="event-description" style="font-size: 12px; color: #666; margin-top: 8px;">${event.description}</div>
+                <button class="buy-ticket-btn" data-id="${event.id}" data-name="${event.name}" data-fee="${feeNumber}" data-free="${event.isFree}" style="margin-top: 12px; padding: 8px 16px; background: #667eea; color: white; border: none; border-radius: 6px; cursor: pointer; width: 100%; font-weight: bold;">
+                    ${event.isFree ? '🎟️ Register Free' : `💳 Buy Ticket - ${displayFee}`}
+                </button>
+            </div>
+        </div>
+    `}).join('');
+    
+    document.querySelectorAll('.buy-ticket-btn').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+            e.stopPropagation();
+            const eventId = btn.dataset.id;
+            const eventName = btn.dataset.name;
+            const fee = Number(btn.dataset.fee) || 0;
+            const isFree = btn.dataset.free === 'true';
+            
+            if (isNaN(fee) || fee === undefined) {
+                showToast('Invalid ticket price', 'error');
+                return;
+            }
+            
+            if (isFree || fee === 0) {
+                showConfirmDialog(
+                    `Confirm registration for ${eventName} (FREE EVENT)`,
+                    async () => {
+                        await purchaseEventTicket(eventId, eventName, 0);
+                    },
+                    () => showToast('Registration cancelled', 'info')
+                );
+            } else {
+                const balanceRes = await fetch(`${API_URL}/balance/${currentUserId}`);
+                const balanceData = await balanceRes.json();
+                if (balanceData.balance < fee) {
+                    showToast(`Insufficient balance! You need ₱${fee.toLocaleString()} for this event.`, 'error');
+                    return;
+                }
+                showConfirmDialog(
+                    `Purchase ticket for ${eventName}?\n\n💰 Price: ₱${fee.toLocaleString()}\n\nClick Yes to confirm purchase.`,
+                    async () => {
+                        await purchaseEventTicket(eventId, eventName, fee);
+                    },
+                    () => showToast('Purchase cancelled', 'info')
+                );
+            }
+        });
+    });
+}
+
+async function purchaseEventTicket(eventId, eventName, fee) {
+    try {
+        const response = await fetch(`${API_URL}/buy-event-ticket`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                userId: currentUserId,
+                eventId: eventId,
+                eventName: eventName,
+                fee: fee
+            })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            showToast(data.message, 'success');
+            loadDashboard();
+        } else {
+            showToast(data.error, 'error');
+        }
+    } catch (error) {
+        showToast('Error processing purchase', 'error');
+    }
+}
+
+function updateEventScroll() {
+    const container = document.getElementById('eventsCards');
+    if (!container) return;
+    
+    const card = document.querySelector('.event-card');
+    if (!card) return;
+    
+    const cardWidth = card.offsetWidth;
+    const gap = 20;
+    const scrollAmount = currentEventIndex * (cardWidth + gap) * eventsPerView;
+    container.style.transform = `translateX(-${scrollAmount}px)`;
+    
+    const maxIndex = Math.max(0, Math.ceil(allEvents.length / eventsPerView) - 1);
+    const leftBtn = document.getElementById('scrollLeftBtn');
+    const rightBtn = document.getElementById('scrollRightBtn');
+    
+    if (leftBtn) leftBtn.disabled = currentEventIndex === 0;
+    if (rightBtn) rightBtn.disabled = currentEventIndex >= maxIndex;
+}
+
+function scrollEventsLeft() {
+    if (currentEventIndex > 0) {
+        currentEventIndex--;
+        updateEventScroll();
+    }
+}
+
+function scrollEventsRight() {
+    const maxIndex = Math.max(0, Math.ceil(allEvents.length / eventsPerView) - 1);
+    if (currentEventIndex < maxIndex) {
+        currentEventIndex++;
+        updateEventScroll();
+    }
+}
+
+// ========== QR CODE FUNCTIONALITY ==========
+function showMyQRCode() {
+    const userData = JSON.stringify({
+        type: 'payment_request',
+        userId: currentUserId,
+        name: localStorage.getItem('username') || 'QCU User',
+        email: currentUserEmail
+    });
+    
+    const modal = document.createElement('div');
+    modal.className = 'qr-modal';
+    modal.innerHTML = `
+        <div class="qr-modal-content">
+            <div class="qr-modal-header">📱 My QR Code</div>
+            <div class="qr-code-container" id="qrCodeContainer"></div>
+            <div class="qr-code-text" id="qrCodeText">${userData}</div>
+            <div class="qr-buttons">
+                <button class="qr-btn qr-btn-secondary" id="copyCodeBtn">📋 Copy Code</button>
+                <button class="qr-btn qr-btn-primary" id="shareCodeBtn">📤 Share</button>
+            </div>
+            <div class="qr-buttons">
+                <button class="qr-btn qr-btn-success" id="enterCodeBtn">🔢 Enter Code Manually</button>
+                <button class="qr-btn qr-close" id="closeQRModal">Close</button>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+    
+    new QRCode(document.getElementById("qrCodeContainer"), {
+        text: userData,
+        width: 200,
+        height: 200,
+        colorDark: "#000000",
+        colorLight: "#ffffff",
+        correctLevel: QRCode.CorrectLevel.H
+    });
+    
+    document.getElementById('copyCodeBtn')?.addEventListener('click', () => {
+        navigator.clipboard.writeText(userData);
+        showToast('Code copied to clipboard!', 'success');
+    });
+    
+    document.getElementById('shareCodeBtn')?.addEventListener('click', () => {
+        if (navigator.share) {
+            navigator.share({
+                title: 'QCU Pay Payment Request',
+                text: userData
+            });
+        } else {
+            showToast('Share not supported on this device', 'info');
+        }
+    });
+    
+    document.getElementById('enterCodeBtn')?.addEventListener('click', () => {
+        modal.remove();
+        showManualCodeEntry();
+    });
+    
+    document.getElementById('closeQRModal')?.addEventListener('click', () => modal.remove());
+}
+
+function showManualCodeEntry() {
+    const modal = document.createElement('div');
+    modal.className = 'scan-modal';
+    modal.innerHTML = `
+        <div class="scan-modal-content">
+            <div class="qr-modal-header">🔢 Enter Payment Code</div>
+            <p>Paste or type the code shared by the person you want to pay:</p>
+            <input type="text" class="scan-input" id="paymentCodeInput" placeholder="Paste code here...">
+            <div class="qr-buttons">
+                <button class="qr-btn qr-btn-primary" id="processPaymentBtn">💸 Process Payment</button>
+                <button class="qr-btn qr-close" id="closeScanModal">Cancel</button>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+    
+    document.getElementById('processPaymentBtn')?.addEventListener('click', async () => {
+        const code = document.getElementById('paymentCodeInput')?.value;
+        if (!code) {
+            showToast('Please enter a code', 'error');
+            return;
+        }
+        
+        try {
+            const userData = JSON.parse(code);
+            if (userData.type === 'payment_request' && userData.userId) {
+                modal.remove();
+                const amount = await showPrompt(`Enter amount to send to ${userData.name || 'user'}:`, "100");
+                if (amount && parseFloat(amount) > 0) {
+                    const result = await performTransfer(userData.email, amount, 'Payment via QR Code');
+                    if (result.success) {
+                        showToast(`Sent ₱${amount} to ${userData.name}!`, 'success');
+                        loadDashboard();
+                    } else {
+                        showToast(result.error, 'error');
+                    }
+                }
+            } else {
+                showToast('Invalid payment code', 'error');
+            }
+        } catch (e) {
+            showToast('Invalid code format', 'error');
+        }
+    });
+    
+    document.getElementById('closeScanModal')?.addEventListener('click', () => modal.remove());
+}
+
+function showScanQRCode() {
+    const modal = document.createElement('div');
+    modal.className = 'scan-modal';
+    modal.innerHTML = `
+        <div class="scan-modal-content">
+            <div class="qr-modal-header">📷 Scan QR Code</div>
+            <div class="scan-preview">
+                📸 Camera preview would appear here<br>Select an image with QR code instead
+            </div>
+            <input type="file" id="qrImageInput" accept="image/*" style="margin: 10px 0; padding: 10px;">
+            <div class="qr-buttons">
+                <button class="qr-btn qr-btn-secondary" id="manualCodeBtn">🔢 Enter Code Manually</button>
+                <button class="qr-btn qr-close" id="closeScanModal">Cancel</button>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+    
+    document.getElementById('qrImageInput')?.addEventListener('change', async (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            showToast('QR reading from image would process here. For demo, use "Enter Code"', 'info');
+            modal.remove();
+            showManualCodeEntry();
+        }
+    });
+    
+    document.getElementById('manualCodeBtn')?.addEventListener('click', () => {
+        modal.remove();
+        showManualCodeEntry();
+    });
+    
+    document.getElementById('closeScanModal')?.addEventListener('click', () => modal.remove());
+}
+
+function setupQRCode() {
+    const qrPlaceholder = document.getElementById('qrPlaceholder');
+    if (qrPlaceholder) {
+        qrPlaceholder.onclick = () => {
+            const modal = document.createElement('div');
+            modal.className = 'qr-modal';
+            modal.innerHTML = `
+                <div class="qr-modal-content">
+                    <div class="qr-modal-header">📱 QR Code Options</div>
+                    <div class="qr-buttons" style="flex-direction: column;">
+                        <button class="qr-btn qr-btn-primary" id="showMyQrBtn">📱 Show My QR Code (Receive Money)</button>
+                        <button class="qr-btn qr-btn-success" id="scanQrBtn">📷 Scan QR Code (Send Money)</button>
+                        <button class="qr-btn qr-close" id="closeOptionsBtn">Close</button>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(modal);
+            
+            document.getElementById('showMyQrBtn')?.addEventListener('click', () => {
+                modal.remove();
+                showMyQRCode();
+            });
+            
+            document.getElementById('scanQrBtn')?.addEventListener('click', () => {
+                modal.remove();
+                showScanQRCode();
+            });
+            
+            document.getElementById('closeOptionsBtn')?.addEventListener('click', () => modal.remove());
+        };
+    }
+}
+
+// ========== STUDENT BILLS CATEGORY BUTTONS ==========
+async function setupCategoryButtons() {
+    const categoriesGrid = document.querySelector('.categories-grid');
+    if (categoriesGrid) {
+        categoriesGrid.innerHTML = '';
+        studentBills.forEach(bill => {
+            const btn = document.createElement('button');
+            btn.className = 'category-btn';
+            btn.textContent = bill.name;
+            btn.addEventListener('click', () => {
+                showItemsModal(bill.category, bill.name);
+            });
+            categoriesGrid.appendChild(btn);
+        });
     }
 }
 
@@ -4113,6 +4699,24 @@ function showTransfer() {
     loadUsers();
 }
 
+function showEvents() {
+    dashboardPage?.classList.add('hidden');
+    payBillsPage?.classList.add('hidden');
+    transferPage?.classList.add('hidden');
+    confirmationPage?.classList.add('hidden');
+    reviewPage?.classList.add('hidden');
+    successPage?.classList.add('hidden');
+    eventsPage?.classList.remove('hidden');
+    profilePage?.classList.add('hidden');
+    notificationsPage?.classList.add('hidden');
+    settingsPage?.classList.add('hidden');
+    refundPage?.classList.add('hidden');
+    refundConfirmationPage?.classList.add('hidden');
+    historyPage?.classList.add('hidden');
+    if (banner) banner.textContent = 'QCU PAY - EVENTS';
+    loadEvents();
+}
+
 function showProfile() {
     dashboardPage?.classList.add('hidden');
     payBillsPage?.classList.add('hidden');
@@ -4148,7 +4752,8 @@ function showSettings() {
     if (banner) banner.textContent = 'QCU SETTINGS';
     loadSettings();
 }
-    function showNotifications() {
+
+function showNotifications() {
     dashboardPage?.classList.add('hidden');
     payBillsPage?.classList.add('hidden');
     transferPage?.classList.add('hidden');
@@ -4163,8 +4768,6 @@ function showSettings() {
     refundConfirmationPage?.classList.add('hidden');
     historyPage?.classList.add('hidden');
     if (banner) banner.textContent = 'QCU NOTIFICATIONS';
-    
-    // Load real notifications from database
     loadNotifications();
 }
 
@@ -4233,7 +4836,7 @@ document.getElementById('enterButton')?.addEventListener('click', () => {
     const amount = document.getElementById('amountInput')?.value;
     const message = document.getElementById('messageInput')?.value;
     if (!amount || amount <= 0) {
-        showToast('Please enter a valid amount', 'error')
+        showToast('Please enter a valid amount', 'error');
         return;
     }
     document.getElementById('reviewUserName').textContent = selectedRecipient?.name;
@@ -4284,23 +4887,6 @@ async function executeTransfer(amount, message) {
     }
 }
 
-// Student Bills Category Buttons
-async function setupCategoryButtons() {
-    const categoriesGrid = document.querySelector('.categories-grid');
-    if (categoriesGrid) {
-        categoriesGrid.innerHTML = '';
-        studentBills.forEach(bill => {
-            const btn = document.createElement('button');
-            btn.className = 'category-btn';
-            btn.textContent = bill.name;
-            btn.addEventListener('click', () => {
-                showItemsModal(bill.category, bill.name);
-            });
-            categoriesGrid.appendChild(btn);
-        });
-    }
-}
-
 // Edit Profile
 document.getElementById('editInfoBtn')?.addEventListener('click', async () => {
     const newName = await showPrompt('Enter new full name:', document.getElementById('profileFullName')?.textContent);
@@ -4315,10 +4901,10 @@ document.getElementById('editInfoBtn')?.addEventListener('click', async () => {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ fullName: newName, address: newAddress, class: newClass })
             });
-            showToast('Profile updated!', 'success')
+            showToast('Profile updated!', 'success');
             loadDashboard();
         } catch (error) {
-            showToast('Update failed', 'error')
+            showToast('Update failed', 'error');
         }
     }
 });
@@ -4333,9 +4919,9 @@ document.getElementById('changePasswordBtn')?.addEventListener('click', async ()
         showToast("Password must be at least 6 characters", 'error');
         return;
     }
-const confirmPassword = await showPrompt("Confirm new password:");
+    const confirmPassword = await showPrompt("Confirm new password:");
     if (newPassword !== confirmPassword) {
-        showToast("Passwords don't match", 'error')
+        showToast("Passwords don't match", 'error');
         return;
     }
     try {
@@ -4345,9 +4931,9 @@ const confirmPassword = await showPrompt("Confirm new password:");
             body: JSON.stringify({ currentPassword, newPassword })
         });
         const data = await response.json();
-        showToast(data.success ? "Password changed successfully!" : data.error, data.success ? 'success' : 'error')
+        showToast(data.success ? "Password changed successfully!" : data.error, data.success ? 'success' : 'error');
     } catch (error) {
-        showToast("Error changing password", 'error')
+        showToast("Error changing password", 'error');
     }
 });
 
@@ -4387,25 +4973,25 @@ document.getElementById('deleteAccountBtn')?.addEventListener('click', async () 
         });
         const data = await response.json();
         if (data.success) {
-    showToast("Account deleted. Goodbye!", 'success');
-    setTimeout(() => {
-        localStorage.clear();
-        window.location.href = "Login.html";
-    }, 1500);
-} else {
-    showToast(data.error, 'error');
-}
+            showToast("Account deleted. Goodbye!", 'success');
+            setTimeout(() => {
+                localStorage.clear();
+                window.location.href = "Login.html";
+            }, 1500);
+        } else {
+            showToast(data.error, 'error');
+        }
     } catch (error) {
         showToast("Error deleting account", 'error');
     }
 });
 
 document.getElementById('verifyEmailBtn')?.addEventListener('click', () => {
-    showToast(`Verification email sent to ${localStorage.getItem('userEmail')}`, 'success')
+    showToast(`Verification email sent to ${localStorage.getItem('userEmail')}`, 'success');
 });
 
 document.getElementById('currencySelect')?.addEventListener('change', (e) => {
-    showToast(`Currency preference saved: ${e.target.value}`, 'success')
+    showToast(`Currency preference saved: ${e.target.value}`, 'success');
 });
 
 // Refund submission
@@ -4417,11 +5003,11 @@ document.getElementById('submitRefundBtn')?.addEventListener('click', () => {
     const reason = document.getElementById('refundReason')?.value;
     
     if (!name || !email || !category || !amount || !reason) {
-        showToast("Please fill all required fields", 'error')
+        showToast("Please fill all required fields", 'error');
         return;
     }
     
-  showToast(`Your refund request has been submitted! We will process it within 3-5 business days.`, 'success')
+    showToast(`Your refund request has been submitted! We will process it within 3-5 business days.`, 'success');
     
     document.getElementById('refundName').value = '';
     document.getElementById('refundEmail').value = '';
@@ -4450,649 +5036,16 @@ function updateDateTime() {
 }
 updateDateTime();
 setInterval(updateDateTime, 1000);
-// ========== NOTIFICATIONS SYSTEM ==========
-async function loadNotifications() {
-    try {
-        const response = await fetch(`${API_URL}/notifications/${currentUserId}`);
-        const notifications = await response.json();
-        
-        // For dashboard sidebar notification panel (recent only)
-        const sidebarNotification = document.querySelector('.notifications');
-        if (sidebarNotification) {
-            if (notifications && notifications.length > 0) {
-                let html = '<h3>🔔 Recent Alerts</h3>';
-                notifications.slice(0, 3).forEach(n => {
-                    html += `
-                        <div style="padding: 10px; margin-bottom: 8px; background: ${n.type === 'critical' ? '#ffebee' : '#fff3cd'}; border-radius: 8px; border-left: 4px solid ${n.type === 'critical' ? '#dc3545' : '#ffc107'};">
-                            <strong style="font-size: 12px;">${n.title}</strong>
-                            <div style="font-size: 11px;">${n.message}</div>
-                            <div style="font-size: 10px; color: #999; margin-top: 5px;">${n.time}</div>
-                        </div>
-                    `;
-                });
-                sidebarNotification.innerHTML = html;
-            } else {
-                sidebarNotification.innerHTML = '<h3>🔔 Notifications</h3><div style="padding: 15px; text-align: center; color: #999;">No new alerts</div>';
-            }
-        }
-        
-        // For full notifications page - get ALL transactions for history
-        const transactionsRes = await fetch(`${API_URL}/transactions/${currentUserId}`);
-        const transactions = await transactionsRes.json();
-        
-        const fullNotificationList = document.getElementById('notificationsList');
-        if (fullNotificationList) {
-            // Separate data by type
-            const alerts = notifications || [];
-            
-            // Group transactions by date
-            const groupedTransactions = {};
-            transactions.forEach(t => {
-                if (!groupedTransactions[t.date]) groupedTransactions[t.date] = [];
-                groupedTransactions[t.date].push(t);
-            });
-            
-            // Sort dates descending
-            const sortedDates = Object.keys(groupedTransactions).sort().reverse();
-            
-            let html = '';
-            
-            // Show alerts section first (if any)
-            if (alerts.length > 0) {
-                html += `
-                    <div class="notification-section">
-                        <div class="section-title">⚠️ ALERTS</div>
-                        ${alerts.map(n => `
-                            <div class="notification-item" style="background: ${n.type === 'critical' ? '#ffebee' : '#fff3cd'}; border-left: 4px solid ${n.type === 'critical' ? '#dc3545' : '#ffc107'};">
-                                <div class="notification-icon">${n.type === 'critical' ? '🔴' : '⚠️'}</div>
-                                <div class="notification-text">
-                                    <div class="notification-title">${n.title}</div>
-                                    <div class="notification-desc">${n.message}</div>
-                                    <div class="notification-time">${n.time}</div>
-                                </div>
-                            </div>
-                        `).join('')}
-                    </div>
-                `;
-            }
-            
-            // Show transaction history grouped by date
-            if (sortedDates.length > 0) {
-                html += `<div class="notification-section"><div class="section-title">📜 TRANSACTION HISTORY</div>`;
-                
-                for (const date of sortedDates) {
-                    const dateObj = new Date(date);
-                    const formattedDate = dateObj.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
-                    
-                    html += `
-                        <div style="margin-top: 15px; margin-bottom: 10px; padding: 8px 12px; background: #667eea; color: white; border-radius: 8px; font-weight: bold;">
-                            📅 ${formattedDate}
-                        </div>
-                    `;
-                    
-                    groupedTransactions[date].forEach(t => {
-                        const isSent = t.type === 'sent';
-                        const icon = isSent ? '📤' : '📥';
-                        const amountColor = isSent ? '#dc3545' : '#28a745';
-                        const amountPrefix = isSent ? '-₱' : '+₱';
-                        
-                        html += `
-                            <div class="notification-item" onclick="alert('Transaction Details:\\nTo/From: ${t.otherParty}\\nAmount: ${amountPrefix}${t.amount.toLocaleString()}\\nMessage: ${t.message || 'No message'}')">
-                                <div class="notification-icon">${icon}</div>
-                                <div class="notification-text">
-                                    <div class="notification-title">${t.otherParty || 'Transaction'}</div>
-                                    <div class="notification-desc">${t.message || 'No message'}</div>
-                                    <div class="notification-time">${t.time}</div>
-                                </div>
-                                <div style="font-weight: bold; color: ${amountColor};">${amountPrefix}${t.amount.toLocaleString()}</div>
-                            </div>
-                        `;
-                    });
-                }
-                
-                html += `</div>`;
-            }
-            
-            if (html === '') {
-                fullNotificationList.innerHTML = '<div style="padding: 40px; text-align: center; color: #999;">🔔 No notifications or transactions yet.<br>Your activity will appear here.</div>';
-            } else {
-                fullNotificationList.innerHTML = html;
-            }
-        }
-        
-    } catch (error) {
-        console.error("Error loading notifications:", error);
-        const fullNotificationList = document.getElementById('notificationsList');
-        if (fullNotificationList) {
-            fullNotificationList.innerHTML = '<div style="padding: 40px; text-align: center; color: #999;">⚠️ Error loading notifications</div>';
-        }
-    }
-}
-// ========== LOAD TRANSACTION HISTORY ==========
-async function loadTransactionHistory() {
-    try {
-        const response = await fetch(`${API_URL}/transactions/${currentUserId}`);
-        const transactions = await response.json();
-        
-        const historyList = document.getElementById('historyList');
-        if (!historyList) return;
-        
-        if (transactions.length === 0) {
-            historyList.innerHTML = '<div class="empty-history"><div class="empty-history-icon">📭</div><h3>No Transactions Yet</h3><p>Your transactions will appear here</p></div>';
-            return;
-        }
-        
-        // Group by date
-        const grouped = {};
-        transactions.forEach(t => {
-            if (!grouped[t.date]) grouped[t.date] = [];
-            grouped[t.date].push(t);
-        });
-        
-        let html = '';
-        Object.keys(grouped).sort().reverse().forEach(date => {
-            html += `<div class="date-group"><div class="date-header">📅 ${new Date(date).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</div>`;
-            grouped[date].forEach(t => {
-                const isSent = t.type === 'sent';
-                const icon = isSent ? '📤' : '📥';
-                const amountClass = isSent ? 'sent' : 'received';
-                const amountPrefix = isSent ? '- ₱' : '+ ₱';
-                html += `
-                    <div class="transaction-item">
-                        <div class="transaction-icon ${amountClass}">${icon}</div>
-                        <div class="transaction-details-hist">
-                            <div class="transaction-name-hist">${t.otherParty || 'Transaction'}</div>
-                            <div class="transaction-message-hist">${t.message || ''}</div>
-                        </div>
-                        <div class="transaction-amount-hist ${amountClass}">
-                            ${amountPrefix}${t.amount.toLocaleString()}
-                            <div class="transaction-time-hist">${t.time}</div>
-                        </div>
-                    </div>
-                `;
-            });
-            html += `</div>`;
-        });
-        
-        historyList.innerHTML = html;
-        
-    } catch (error) {
-        console.error("Error loading transaction history:", error);
-    }
-}
-    // ========== SPENDING CHART ==========
-let spendingChart = null;
-
-async function updateSpendingChart() {
-    try {
-        const response = await fetch(`${API_URL}/transactions/${currentUserId}`);
-        const transactions = await response.json();
-        
-        // Filter only sent transactions (spending)
-        const spending = transactions.filter(t => t.type === 'sent');
-        
-        // If no spending, show message
-        if (spending.length === 0) {
-            const ctx = document.getElementById('spendingChart')?.getContext('2d');
-            if (ctx) {
-                if (spendingChart) spendingChart.destroy();
-                ctx.clearRect(0, 0, 200, 200);
-                ctx.font = '12px Arial';
-                ctx.fillStyle = '#999';
-                ctx.fillText('No spending yet', 60, 100);
-            }
-            return;
-        }
-        
-        // Group by category
-        const categoryTotals = {};
-        spending.forEach(t => {
-            const category = t.category || 'Other';
-            categoryTotals[category] = (categoryTotals[category] || 0) + t.amount;
-        });
-        
-        const categories = Object.keys(categoryTotals);
-        const amounts = categories.map(c => categoryTotals[c]);
-        
-        const colors = ['#667eea', '#f093fb', '#4facfe', '#43e97b', '#fa709a', '#30cfd0', '#a8edea', '#ff9a9e', '#f59e0b', '#ef4444'];
-        
-        const ctx = document.getElementById('spendingChart')?.getContext('2d');
-        if (!ctx) return;
-        
-        if (spendingChart) spendingChart.destroy();
-        
-        spendingChart = new Chart(ctx, {
-            type: 'pie',
-            data: {
-                labels: categories,
-                datasets: [{
-                    data: amounts,
-                    backgroundColor: colors.slice(0, categories.length),
-                    borderWidth: 0
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: true,
-                plugins: {
-                    legend: { position: 'bottom', labels: { font: { size: 10 } } },
-                    tooltip: {
-                        callbacks: {
-                            label: function(context) {
-                                const label = context.label || '';
-                                const value = context.raw || 0;
-                                const total = context.dataset.data.reduce((a, b) => a + b, 0);
-                                const percentage = ((value / total) * 100).toFixed(1);
-                                return `${label}: ₱${value.toLocaleString()} (${percentage}%)`;
-                            }
-                        }
-                    }
-                }
-            }
-        });
-        
-    } catch (error) {
-        console.error("Error updating spending chart:", error);
-    }
-}
-
-// ========== CHECK DAILY SPENDING ==========
-async function checkDailySpending() {
-    try {
-        const response = await fetch(`${API_URL}/daily-spending/${currentUserId}`);
-        const data = await response.json();
-        
-        if (data.totalSpent > 0) {
-            console.log(`Today's spending: ₱${data.totalSpent.toLocaleString()} (${data.transactionCount} transactions)`);
-        }
-        return data;
-    } catch (error) {
-        console.error("Error checking daily spending:", error);
-    }
-}
-    // ========== EVENTS LOADING FUNCTION ==========
-let allEvents = [];
-let currentEventIndex = 0;
-let eventsPerView = 3;
-
-async function loadEvents() {
-    try {
-        const response = await fetch(`${API_URL}/events`);
-        allEvents = await response.json();
-        renderEventsCards();
-        updateEventScroll();
-    } catch (error) {
-        console.error("Error loading events:", error);
-        // Fallback events if API fails
-        allEvents = [
-            { id: 1, name: "🎵 Music Festival", date: "April 15, 2026", location: "Central Park", fee: 500, isFree: false, description: "Live bands, food trucks, and fun!" },
-            { id: 2, name: "💻 Tech Conference", date: "April 20, 2026", location: "Convention Center", fee: 1200, isFree: false, description: "Learn from industry experts" },
-            { id: 3, name: "🍔 Food Expo", date: "April 25, 2026", location: "Trade Hall", fee: 0, isFree: true, description: "Free food tasting!" },
-            { id: 4, name: "🎨 Art Exhibition", date: "May 1, 2026", location: "Art Museum", fee: 300, isFree: false, description: "Local artists showcase" },
-            { id: 5, name: "⚽ Sports Tournament", date: "May 5, 2026", location: "University Stadium", fee: 200, isFree: false, description: "Join or watch the games!" },
-            { id: 6, name: "💼 Business Summit", date: "May 10, 2026", location: "Business Center", fee: 1500, isFree: false, description: "Network with professionals" },
-            { id: 7, name: "🏃 Charity Run", date: "May 15, 2026", location: "City Streets", fee: 350, isFree: false, description: "Run for a cause" },
-            { id: 8, name: "🎬 Film Screening", date: "May 20, 2026", location: "Cinema Plaza", fee: 0, isFree: true, description: "Free movie night!" }
-        ];
-        renderEventsCards();
-        updateEventScroll();
-    }
-}
-
-function renderEventsCards() {
-    const container = document.getElementById('eventsCards');
-    if (!container) return;
-    
-    console.log("Events data:", allEvents); // Debug: Check what events are loaded
-    
-    container.innerHTML = allEvents.map(event => {
-        const feeNumber = Number(event.fee) || 0;
-        const displayFee = feeNumber > 0 ? `₱${feeNumber.toLocaleString()}` : 'FREE';
-        
-        return `
-        <div class="event-card" data-id="${event.id}" data-name="${event.name}" data-fee="${feeNumber}" data-free="${event.isFree}">
-            <div class="event-img">🎉 ${event.name.substring(0, 2)}</div>
-            <div class="event-details">
-                <div class="event-name">${event.name}</div>
-                <div class="event-date">📅 ${event.date}</div>
-                <div class="event-location">📍 ${event.location}</div>
-                <div class="event-fee ${event.isFree ? 'free' : 'paid'}">
-                    ${event.isFree ? '🎟️ FREE' : `💰 ${displayFee}`}
-                </div>
-                <div class="event-description" style="font-size: 12px; color: #666; margin-top: 8px;">${event.description}</div>
-                <button class="buy-ticket-btn" data-id="${event.id}" data-name="${event.name}" data-fee="${feeNumber}" data-free="${event.isFree}" style="margin-top: 12px; padding: 8px 16px; background: #667eea; color: white; border: none; border-radius: 6px; cursor: pointer; width: 100%; font-weight: bold;">
-                    ${event.isFree ? '🎟️ Register Free' : `💳 Buy Ticket - ${displayFee}`}
-                </button>
-            </div>
-        </div>
-    `}).join('');
-    
-    // Add event listeners to buy buttons
-    document.querySelectorAll('.buy-ticket-btn').forEach(btn => {
-        btn.addEventListener('click', async (e) => {
-            e.stopPropagation();
-            const eventId = btn.dataset.id;
-            const eventName = btn.dataset.name;
-            const fee = Number(btn.dataset.fee) || 0;
-            const isFree = btn.dataset.free === 'true';
-            
-            console.log("Buying ticket:", { eventId, eventName, fee, isFree }); // Debug
-            
-            if (isNaN(fee) || fee === undefined) {
-                showToast('Invalid ticket price', 'error');
-                return;
-            }
-            
-            if (isFree || fee === 0) {
-                showConfirmDialog(
-                    `Confirm registration for ${eventName} (FREE EVENT)`,
-                    async () => {
-                        await purchaseEventTicket(eventId, eventName, 0);
-                    },
-                    () => showToast('Registration cancelled', 'info')
-                );
-            } else {
-                // Check balance first
-                const balanceRes = await fetch(`${API_URL}/balance/${currentUserId}`);
-                const balanceData = await balanceRes.json();
-                if (balanceData.balance < fee) {
-                    showToast(`Insufficient balance! You need ₱${fee.toLocaleString()} for this event.`, 'error');
-                    return;
-                }
-                showConfirmDialog(
-                    `Purchase ticket for ${eventName}?\n\n💰 Price: ₱${fee.toLocaleString()}\n\nClick Yes to confirm purchase.`,
-                    async () => {
-                        await purchaseEventTicket(eventId, eventName, fee);
-                    },
-                    () => showToast('Purchase cancelled', 'info')
-                );
-            }
-        });
-    });
-}
-
-async function purchaseEventTicket(eventId, eventName, fee) {
-    try {
-        const response = await fetch(`${API_URL}/buy-event-ticket`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                userId: currentUserId,
-                eventId: eventId,
-                eventName: eventName,
-                fee: fee
-            })
-        });
-        
-        const data = await response.json();
-        
-        if (data.success) {
-            showToast(data.message, 'success');
-            loadDashboard(); // Refresh balance
-        } else {
-            showToast(data.error, 'error');
-        }
-    } catch (error) {
-        showToast('Error processing purchase', 'error');
-    }
-}
-
-function updateEventScroll() {
-    const container = document.getElementById('eventsCards');
-    if (!container) return;
-    
-    const card = document.querySelector('.event-card');
-    if (!card) return;
-    
-    const cardWidth = card.offsetWidth;
-    const gap = 20;
-    const scrollAmount = currentEventIndex * (cardWidth + gap) * eventsPerView;
-    container.style.transform = `translateX(-${scrollAmount}px)`;
-    
-    const maxIndex = Math.max(0, Math.ceil(allEvents.length / eventsPerView) - 1);
-    const leftBtn = document.getElementById('scrollLeftBtn');
-    const rightBtn = document.getElementById('scrollRightBtn');
-    
-    if (leftBtn) leftBtn.disabled = currentEventIndex === 0;
-    if (rightBtn) rightBtn.disabled = currentEventIndex >= maxIndex;
-}
-
-function scrollEventsLeft() {
-    if (currentEventIndex > 0) {
-        currentEventIndex--;
-        updateEventScroll();
-    }
-}
-
-function scrollEventsRight() {
-    const maxIndex = Math.max(0, Math.ceil(allEvents.length / eventsPerView) - 1);
-    if (currentEventIndex < maxIndex) {
-        currentEventIndex++;
-        updateEventScroll();
-    }
-}
-
-// Make sure showEvents calls loadEvents
-function showEvents() {
-    dashboardPage?.classList.add('hidden');
-    payBillsPage?.classList.add('hidden');
-    transferPage?.classList.add('hidden');
-    confirmationPage?.classList.add('hidden');
-    reviewPage?.classList.add('hidden');
-    successPage?.classList.add('hidden');
-    eventsPage?.classList.remove('hidden');
-    profilePage?.classList.add('hidden');
-    notificationsPage?.classList.add('hidden');
-    settingsPage?.classList.add('hidden');
-    refundPage?.classList.add('hidden');
-    refundConfirmationPage?.classList.add('hidden');
-    historyPage?.classList.add('hidden');
-    if (banner) banner.textContent = 'QCU PAY - EVENTS';
-    loadEvents(); // THIS IS THE KEY LINE THAT WAS MISSING
-}
 
 // Add scroll button event listeners
 document.getElementById('scrollLeftBtn')?.addEventListener('click', scrollEventsLeft);
 document.getElementById('scrollRightBtn')?.addEventListener('click', scrollEventsRight);
-// ========== QR CODE FUNCTIONALITY ==========
 
-// Generate QR Code for receiving payments
-function showMyQRCode() {
-    // Create user data for QR
-    const userData = JSON.stringify({
-        type: 'payment_request',
-        userId: currentUserId,
-        name: localStorage.getItem('username') || 'QCU User',
-        email: currentUserEmail
-    });
-    
-    const modal = document.createElement('div');
-    modal.className = 'qr-modal';
-    modal.innerHTML = `
-        <div class="qr-modal-content">
-            <div class="qr-modal-header">📱 My QR Code</div>
-            <div class="qr-code-container" id="qrCodeContainer"></div>
-            <div class="qr-code-text" id="qrCodeText">${userData}</div>
-            <div class="qr-buttons">
-                <button class="qr-btn qr-btn-secondary" id="copyCodeBtn">📋 Copy Code</button>
-                <button class="qr-btn qr-btn-primary" id="shareCodeBtn">📤 Share</button>
-            </div>
-            <div class="qr-buttons">
-                <button class="qr-btn qr-btn-success" id="enterCodeBtn">🔢 Enter Code Manually</button>
-                <button class="qr-btn qr-close" id="closeQRModal">Close</button>
-            </div>
-        </div>
-    `;
-    
-    document.body.appendChild(modal);
-    
-    // Generate QR code
-    new QRCode(document.getElementById("qrCodeContainer"), {
-        text: userData,
-        width: 200,
-        height: 200,
-        colorDark: "#000000",
-        colorLight: "#ffffff",
-        correctLevel: QRCode.CorrectLevel.H
-    });
-    
-    // Copy code button
-    document.getElementById('copyCodeBtn')?.addEventListener('click', () => {
-        navigator.clipboard.writeText(userData);
-        showToast('Code copied to clipboard!', 'success');
-    });
-    
-    // Share button
-    document.getElementById('shareCodeBtn')?.addEventListener('click', () => {
-        if (navigator.share) {
-            navigator.share({
-                title: 'QCU Pay Payment Request',
-                text: userData
-            });
-        } else {
-            showToast('Share not supported on this device', 'info');
-        }
-    });
-    
-    // Enter code manually
-    document.getElementById('enterCodeBtn')?.addEventListener('click', () => {
-        modal.remove();
-        showManualCodeEntry();
-    });
-    
-    document.getElementById('closeQRModal')?.addEventListener('click', () => modal.remove());
-}
-
-// Show manual code entry for scanning
-function showManualCodeEntry() {
-    const modal = document.createElement('div');
-    modal.className = 'scan-modal';
-    modal.innerHTML = `
-        <div class="scan-modal-content">
-            <div class="qr-modal-header">🔢 Enter Payment Code</div>
-            <p>Paste or type the code shared by the person you want to pay:</p>
-            <input type="text" class="scan-input" id="paymentCodeInput" placeholder="Paste code here...">
-            <div class="qr-buttons">
-                <button class="qr-btn qr-btn-primary" id="processPaymentBtn">💸 Process Payment</button>
-                <button class="qr-btn qr-close" id="closeScanModal">Cancel</button>
-            </div>
-        </div>
-    `;
-    
-    document.body.appendChild(modal);
-    
-    document.getElementById('processPaymentBtn')?.addEventListener('click', async () => {
-        const code = document.getElementById('paymentCodeInput')?.value;
-        if (!code) {
-            showToast('Please enter a code', 'error');
-            return;
-        }
-        
-        try {
-            const userData = JSON.parse(code);
-            if (userData.type === 'payment_request' && userData.userId) {
-                modal.remove();
-                // Show payment dialog to send money
-                const amount = await showPrompt(`Enter amount to send to ${userData.name || 'user'}:`, "100");
-                if (amount && parseFloat(amount) > 0) {
-                    const result = await performTransfer(userData.email, amount, 'Payment via QR Code');
-                    if (result.success) {
-                        showToast(`Sent ₱${amount} to ${userData.name}!`, 'success');
-                        loadDashboard();
-                    } else {
-                        showToast(result.error, 'error');
-                    }
-                }
-            } else {
-                showToast('Invalid payment code', 'error');
-            }
-        } catch (e) {
-            showToast('Invalid code format', 'error');
-        }
-    });
-    
-    document.getElementById('closeScanModal')?.addEventListener('click', () => modal.remove());
-}
-
-// Scan QR from camera (simplified - opens file picker for demo)
-function showScanQRCode() {
-    const modal = document.createElement('div');
-    modal.className = 'scan-modal';
-    modal.innerHTML = `
-        <div class="scan-modal-content">
-            <div class="qr-modal-header">📷 Scan QR Code</div>
-            <div class="scan-preview">
-                📸 Camera preview would appear here<br>Select an image with QR code instead
-            </div>
-            <input type="file" id="qrImageInput" accept="image/*" style="margin: 10px 0; padding: 10px;">
-            <div class="qr-buttons">
-                <button class="qr-btn qr-btn-secondary" id="manualCodeBtn">🔢 Enter Code Manually</button>
-                <button class="qr-btn qr-close" id="closeScanModal">Cancel</button>
-            </div>
-        </div>
-    `;
-    
-    document.body.appendChild(modal);
-    
-    document.getElementById('qrImageInput')?.addEventListener('change', async (e) => {
-        const file = e.target.files[0];
-        if (file) {
-            // For demo, show a message - real QR reading requires additional library
-            showToast('QR reading from image would process here. For demo, use "Enter Code"', 'info');
-            modal.remove();
-            showManualCodeEntry();
-        }
-    });
-    
-    document.getElementById('manualCodeBtn')?.addEventListener('click', () => {
-        modal.remove();
-        showManualCodeEntry();
-    });
-    
-    document.getElementById('closeScanModal')?.addEventListener('click', () => modal.remove());
-}
-
-// Update QR Placeholder click handler
-function setupQRCode() {
-    const qrPlaceholder = document.getElementById('qrPlaceholder');
-    if (qrPlaceholder) {
-        qrPlaceholder.onclick = () => {
-            // Create modal with options
-            const modal = document.createElement('div');
-            modal.className = 'qr-modal';
-            modal.innerHTML = `
-                <div class="qr-modal-content">
-                    <div class="qr-modal-header">📱 QR Code Options</div>
-                    <div class="qr-buttons" style="flex-direction: column;">
-                        <button class="qr-btn qr-btn-primary" id="showMyQrBtn">📱 Show My QR Code (Receive Money)</button>
-                        <button class="qr-btn qr-btn-success" id="scanQrBtn">📷 Scan QR Code (Send Money)</button>
-                        <button class="qr-btn qr-close" id="closeOptionsBtn">Close</button>
-                    </div>
-                </div>
-            `;
-            document.body.appendChild(modal);
-            
-            document.getElementById('showMyQrBtn')?.addEventListener('click', () => {
-                modal.remove();
-                showMyQRCode();
-            });
-            
-            document.getElementById('scanQrBtn')?.addEventListener('click', () => {
-                modal.remove();
-                showScanQRCode();
-            });
-            
-            document.getElementById('closeOptionsBtn')?.addEventListener('click', () => modal.remove());
-        };
-    }
-}
-    
 // Initialize everything
 setupCategoryButtons();
 loadDashboard();
 setupQRCode();
 loadSettings();
 </script>
-
 </body>
 </html>
