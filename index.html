@@ -4798,6 +4798,7 @@ function setupQRCode() {
 }
 
     // ========== QUICK PAY FUNCTIONALITY ==========
+// ========== QUICK PAY FUNCTIONALITY ==========
 function showQuickPay() {
     const modal = document.createElement('div');
     modal.className = 'quickpay-modal';
@@ -4805,16 +4806,16 @@ function showQuickPay() {
         <div class="quickpay-modal-content">
             <div class="quickpay-modal-header">⚡ Quick Pay</div>
             <div class="quickpay-two-columns">
-                <!-- Left Card: Receive Money via QR -->
+                <!-- Left Card: Scan QR to Pay -->
                 <div class="quickpay-card">
-                    <h3>📱 Receive Money</h3>
+                    <h3>📷 Scan QR to Pay</h3>
                     <div class="quickpay-qr">
-                        <div class="quickpay-qr-placeholder" id="quickpayQrBtn">
-                            <span>📱 My QR</span>
+                        <div class="quickpay-qr-placeholder" id="quickpayScanQrBtn">
+                            <span>📷 Scan QR</span>
                         </div>
                         <div class="quickpay-buttons">
-                            <button class="quickpay-btn quickpay-btn-primary" id="quickpayShowQrBtn">Show My QR Code</button>
-                            <button class="quickpay-btn quickpay-btn-secondary" id="quickpayManualCodeBtn">Enter Code Manually</button>
+                            <button class="quickpay-btn quickpay-btn-primary" id="quickpayOpenScannerBtn">Open Camera Scanner</button>
+                            <button class="quickpay-btn quickpay-btn-secondary" id="quickpayEnterCodeBtn">Enter Code Manually</button>
                         </div>
                     </div>
                 </div>
@@ -4853,22 +4854,22 @@ function showQuickPay() {
     
     document.body.appendChild(modal);
     
-    // QR Button - Show My QR Code
-    document.getElementById('quickpayShowQrBtn')?.addEventListener('click', () => {
+    // Open Scanner (Camera) - to pay someone
+    document.getElementById('quickpayOpenScannerBtn')?.addEventListener('click', () => {
         modal.remove();
-        showMyQRCode();
+        showScanQRCode();
     });
     
-    // Manual Code Entry
-    document.getElementById('quickpayManualCodeBtn')?.addEventListener('click', () => {
+    // Enter Code Manually - to pay someone
+    document.getElementById('quickpayEnterCodeBtn')?.addEventListener('click', () => {
         modal.remove();
         showManualCodeEntry();
     });
     
-    // Quick QR placeholder click
-    document.getElementById('quickpayQrBtn')?.addEventListener('click', () => {
+    // Click on QR placeholder - opens scanner
+    document.getElementById('quickpayScanQrBtn')?.addEventListener('click', () => {
         modal.remove();
-        showMyQRCode();
+        showScanQRCode();
     });
     
     // Quick purchase items
@@ -4880,7 +4881,6 @@ function showQuickPay() {
             
             modal.remove();
             
-            // Check balance first
             const balanceRes = await fetch(`${API_URL}/balance/${currentUserId}`);
             const balanceData = await balanceRes.json();
             
@@ -4909,7 +4909,7 @@ function showQuickPay() {
     
     document.getElementById('closeQuickPayBtn')?.addEventListener('click', () => modal.remove());
 }
-
+    
 // ========== STUDENT BILLS CATEGORY BUTTONS ==========
 async function setupCategoryButtons() {
     const categoriesGrid = document.querySelector('.categories-grid');
