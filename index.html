@@ -5,7 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>QCU Dashboard</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
 <style>
 /* ===== RESET ===== */
 * {
@@ -2669,6 +2670,29 @@ input:checked + .toggle-slider:before {
     border-top: 1px solid #eee;
     text-align: center;
 }
+    .progress {
+    background: white;
+    border-radius: 12px;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+#spendingChart {
+    max-width: 200px;
+    max-height: 200px;
+    margin: 10px auto;
+}
+
+.progress h3 {
+    font-size: 14px;
+    color: #1f2937;
+    margin-bottom: 15px;
+    text-align: center;
+}
 </style>
 </head>
 
@@ -2719,10 +2743,11 @@ input:checked + .toggle-slider:before {
                             <div class="amount" id="netChangeToday" style="color: #28a745;">₱0.00</div>
                         </div>
                     </div>
-                    <div class="progress-section">
-                        <div class="progress">
-                            <h3>Your progress</h3>
-                        </div>
+                    <div class="progress">
+    <h3>Spending by Category</h3>
+    <canvas id="spendingChart" width="200" height="200"></canvas>
+    <div id="chartLegend" style="margin-top: 15px; font-size: 12px;"></div>
+</div>
                         <div class="quickpay">
                             <h3>Quickpay</h3>
                             <p>🍽️</p>
@@ -3522,6 +3547,7 @@ async function loadDashboard() {
 
         await loadNotifications();
         await checkDailySpending();
+        await updateSpendingChart();
         
     } catch (error) {
         console.error("Error loading dashboard:", error);
