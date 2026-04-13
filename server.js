@@ -409,6 +409,152 @@ app.get('/api/notifications/:userId', async (req, res) => {
     }
 });
 
+// ============ EVENTS ENDPOINT ============
+app.get('/api/events', async (req, res) => {
+    const events = [
+        {
+            id: 1,
+            name: "🎵 Music Festival",
+            date: "April 15, 2026",
+            location: "Central Park",
+            fee: 500,
+            isFree: false,
+            description: "Live bands, food trucks, and fun!"
+        },
+        {
+            id: 2,
+            name: "💻 Tech Conference",
+            date: "April 20, 2026",
+            location: "Convention Center",
+            fee: 1200,
+            isFree: false,
+            description: "Learn from industry experts"
+        },
+        {
+            id: 3,
+            name: "🍔 Food Expo",
+            date: "April 25, 2026",
+            location: "Trade Hall",
+            fee: 0,
+            isFree: true,
+            description: "Free food tasting!"
+        },
+        {
+            id: 4,
+            name: "🎨 Art Exhibition",
+            date: "May 1, 2026",
+            location: "Art Museum",
+            fee: 300,
+            isFree: false,
+            description: "Local artists showcase"
+        },
+        {
+            id: 5,
+            name: "⚽ Sports Tournament",
+            date: "May 5, 2026",
+            location: "University Stadium",
+            fee: 200,
+            isFree: false,
+            description: "Join or watch the games!"
+        },
+        {
+            id: 6,
+            name: "💼 Business Summit",
+            date: "May 10, 2026",
+            location: "Business Center",
+            fee: 1500,
+            isFree: false,
+            description: "Network with professionals"
+        },
+        {
+            id: 7,
+            name: "🏃 Charity Run",
+            date: "May 15, 2026",
+            location: "City Streets",
+            fee: 350,
+            isFree: false,
+            description: "Run for a cause"
+        },
+        {
+            id: 8,
+            name: "🎬 Film Screening",
+            date: "May 20, 2026",
+            location: "Cinema Plaza",
+            fee: 0,
+            isFree: true,
+            description: "Free movie night!"
+        },
+        {
+            id: 9,
+            name: "📚 Book Fair",
+            date: "May 25, 2026",
+            location: "Library Grounds",
+            fee: 0,
+            isFree: true,
+            description: "Get discounted books"
+        },
+        {
+            id: 10,
+            name: "🎪 University Fair",
+            date: "May 30, 2026",
+            location: "Campus Grounds",
+            fee: 100,
+            isFree: false,
+            description: "Clubs and organizations fair"
+        }
+    ];
+    res.json(events);
+});
+
+// ============ PURCHASE EVENT TICKET ============
+app.post('/api/buy-event-ticket', async (req, res) => {
+    try {
+        await connectDB();
+        const { userId, eventId, eventName, fee } = req.body;
+        
+        const user = await usersCollection.findOne({ _id: new ObjectId(userId) });
+        if (!user) return res.status(404).json({ error: 'User not found' });
+        
+        if (fee > 0 && user.balance < fee) {
+            return res.status(400).json({ error: `Insufficient balance! You need ₱${fee} for this event.` });
+        }
+        
+        // Deduct fee if not free
+        let newBalance = user.balance;
+        if (fee > 0) {
+            await usersCollection.updateOne(
+                { _id: new ObjectId(userId) },
+                { $inc: { balance: -fee } }
+            );
+            newBalance = user.balance - fee;
+        }
+        
+        // Record transaction
+        const now = new Date();
+        await transactionsCollection.insertOne({
+            userId: userId,
+            otherParty: eventName,
+            otherPartyEmail: "EVENT-TICKET",
+            amount: fee,
+            message: `Purchased ticket for ${eventName}`,
+            date: now.toISOString().split('T')[0],
+            time: now.toLocaleTimeString(),
+            type: 'sent',
+            category: 'Events'
+        });
+        
+        res.json({ 
+            success: true, 
+            message: fee > 0 ? `Successfully purchased ticket for ${eventName}! ₱${fee} deducted.` : `Successfully registered for free event: ${eventName}!`,
+            newBalance: newBalance
+        });
+        
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
 // For Vercel serverless
 module.exports = app;
 
