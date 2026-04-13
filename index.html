@@ -2942,13 +2942,13 @@ input:checked + .toggle-slider:before {
             </div>
         </div>
 
-        <!-- EVENTS PAGE -->
+                <!-- EVENTS PAGE -->
         <div id="eventsPage" class="hidden">
             <div class="events-container">
                 <div class="events-banner" id="eventsBanner"></div>
                 <div class="events-scroll-container">
                     <button class="scroll-btn scroll-left" id="scrollLeftBtn">←</button>
-                    <div class="events-cards-wrapper" id="eventsWrapper">
+                    <div class="events-cards-wrapper">
                         <div class="events-cards" id="eventsCards"></div>
                     </div>
                     <button class="scroll-btn scroll-right" id="scrollRightBtn">→</button>
@@ -2958,7 +2958,7 @@ input:checked + .toggle-slider:before {
                 </div>
             </div>
         </div>
-
+    
         <!-- PROFILE PAGE -->
         <div id="profilePage" class="hidden">
             <div class="profile-container">
@@ -3968,23 +3968,6 @@ function showTransfer() {
     loadUsers();
 }
 
-function showEvents() {
-    dashboardPage?.classList.add('hidden');
-    payBillsPage?.classList.add('hidden');
-    transferPage?.classList.add('hidden');
-    confirmationPage?.classList.add('hidden');
-    reviewPage?.classList.add('hidden');
-    successPage?.classList.add('hidden');
-    eventsPage?.classList.remove('hidden');
-    profilePage?.classList.add('hidden');
-    notificationsPage?.classList.add('hidden');
-    settingsPage?.classList.add('hidden');
-    refundPage?.classList.add('hidden');
-    refundConfirmationPage?.classList.add('hidden');
-    historyPage?.classList.add('hidden');
-    if (banner) banner.textContent = 'QCU PAY - EVENTS';
-}
-
 function showProfile() {
     dashboardPage?.classList.add('hidden');
     payBillsPage?.classList.add('hidden');
@@ -4570,6 +4553,170 @@ async function checkDailySpending() {
         console.error("Error checking daily spending:", error);
     }
 }
+    // ========== EVENTS LOADING FUNCTION ==========
+let allEvents = [];
+let currentEventIndex = 0;
+let eventsPerView = 3;
+
+async function loadEvents() {
+    try {
+        const response = await fetch(`${API_URL}/events`);
+        allEvents = await response.json();
+        renderEventsCards();
+        updateEventScroll();
+    } catch (error) {
+        console.error("Error loading events:", error);
+        // Fallback events if API fails
+        allEvents = [
+            { id: 1, name: "🎵 Music Festival", date: "April 15, 2026", location: "Central Park", fee: 500, isFree: false, description: "Live bands, food trucks, and fun!" },
+            { id: 2, name: "💻 Tech Conference", date: "April 20, 2026", location: "Convention Center", fee: 1200, isFree: false, description: "Learn from industry experts" },
+            { id: 3, name: "🍔 Food Expo", date: "April 25, 2026", location: "Trade Hall", fee: 0, isFree: true, description: "Free food tasting!" },
+            { id: 4, name: "🎨 Art Exhibition", date: "May 1, 2026", location: "Art Museum", fee: 300, isFree: false, description: "Local artists showcase" },
+            { id: 5, name: "⚽ Sports Tournament", date: "May 5, 2026", location: "University Stadium", fee: 200, isFree: false, description: "Join or watch the games!" },
+            { id: 6, name: "💼 Business Summit", date: "May 10, 2026", location: "Business Center", fee: 1500, isFree: false, description: "Network with professionals" },
+            { id: 7, name: "🏃 Charity Run", date: "May 15, 2026", location: "City Streets", fee: 350, isFree: false, description: "Run for a cause" },
+            { id: 8, name: "🎬 Film Screening", date: "May 20, 2026", location: "Cinema Plaza", fee: 0, isFree: true, description: "Free movie night!" }
+        ];
+        renderEventsCards();
+        updateEventScroll();
+    }
+}
+
+function renderEventsCards() {
+    const container = document.getElementById('eventsCards');
+    if (!container) return;
+    
+    container.innerHTML = allEvents.map(event => `
+        <div class="event-card" data-id="${event.id}" data-name="${event.name}" data-fee="${event.fee}" data-free="${event.isFree}">
+            <div class="event-img">🎉 ${event.name.substring(0, 2)}</div>
+            <div class="event-details">
+                <div class="event-name">${event.name}</div>
+                <div class="event-date">📅 ${event.date}</div>
+                <div class="event-location">📍 ${event.location}</div>
+                <div class="event-fee ${event.isFree ? 'free' : 'paid'}">
+                    ${event.isFree ? '🎟️ FREE' : `💰 ₱${event.fee.toLocaleString()}`}
+                </div>
+                <div class="event-description" style="font-size: 12px; color: #666; margin-top: 8px;">${event.description}</div>
+                <button class="buy-ticket-btn" data-id="${event.id}" data-name="${event.name}" data-fee="${event.fee}" data-free="${event.isFree}" style="margin-top: 12px; padding: 8px 16px; background: #667eea; color: white; border: none; border-radius: 6px; cursor: pointer; width: 100%; font-weight: bold;">
+                    ${event.isFree ? '🎟️ Register Free' : `💳 Buy Ticket - ₱${event.fee.toLocaleString()}`}
+                </button>
+            </div>
+        </div>
+    `).join('');
+    
+    // Add event listeners to buy buttons
+    document.querySelectorAll('.buy-ticket-btn').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+            e.stopPropagation();
+            const eventId = btn.dataset.id;
+            const eventName = btn.dataset.name;
+            const fee = parseFloat(btn.dataset.fee);
+            const isFree = btn.dataset.free === 'true';
+            
+            if (isFree) {
+                showConfirmDialog(
+                    `Confirm registration for ${eventName} (FREE EVENT)`,
+                    async () => {
+                        await purchaseEventTicket(eventId, eventName, fee);
+                    },
+                    () => showToast('Registration cancelled', 'info')
+                );
+            } else {
+                showConfirmDialog(
+                    `Purchase ticket for ${eventName}?\n\n💰 Price: ₱${fee.toLocaleString()}\n\nClick Yes to confirm purchase.`,
+                    async () => {
+                        await purchaseEventTicket(eventId, eventName, fee);
+                    },
+                    () => showToast('Purchase cancelled', 'info')
+                );
+            }
+        });
+    });
+}
+
+async function purchaseEventTicket(eventId, eventName, fee) {
+    try {
+        const response = await fetch(`${API_URL}/buy-event-ticket`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                userId: currentUserId,
+                eventId: eventId,
+                eventName: eventName,
+                fee: fee
+            })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            showToast(data.message, 'success');
+            loadDashboard(); // Refresh balance
+        } else {
+            showToast(data.error, 'error');
+        }
+    } catch (error) {
+        showToast('Error processing purchase', 'error');
+    }
+}
+
+function updateEventScroll() {
+    const container = document.getElementById('eventsCards');
+    if (!container) return;
+    
+    const card = document.querySelector('.event-card');
+    if (!card) return;
+    
+    const cardWidth = card.offsetWidth;
+    const gap = 20;
+    const scrollAmount = currentEventIndex * (cardWidth + gap) * eventsPerView;
+    container.style.transform = `translateX(-${scrollAmount}px)`;
+    
+    const maxIndex = Math.max(0, Math.ceil(allEvents.length / eventsPerView) - 1);
+    const leftBtn = document.getElementById('scrollLeftBtn');
+    const rightBtn = document.getElementById('scrollRightBtn');
+    
+    if (leftBtn) leftBtn.disabled = currentEventIndex === 0;
+    if (rightBtn) rightBtn.disabled = currentEventIndex >= maxIndex;
+}
+
+function scrollEventsLeft() {
+    if (currentEventIndex > 0) {
+        currentEventIndex--;
+        updateEventScroll();
+    }
+}
+
+function scrollEventsRight() {
+    const maxIndex = Math.max(0, Math.ceil(allEvents.length / eventsPerView) - 1);
+    if (currentEventIndex < maxIndex) {
+        currentEventIndex++;
+        updateEventScroll();
+    }
+}
+
+// Make sure showEvents calls loadEvents
+function showEvents() {
+    dashboardPage?.classList.add('hidden');
+    payBillsPage?.classList.add('hidden');
+    transferPage?.classList.add('hidden');
+    confirmationPage?.classList.add('hidden');
+    reviewPage?.classList.add('hidden');
+    successPage?.classList.add('hidden');
+    eventsPage?.classList.remove('hidden');
+    profilePage?.classList.add('hidden');
+    notificationsPage?.classList.add('hidden');
+    settingsPage?.classList.add('hidden');
+    refundPage?.classList.add('hidden');
+    refundConfirmationPage?.classList.add('hidden');
+    historyPage?.classList.add('hidden');
+    if (banner) banner.textContent = 'QCU PAY - EVENTS';
+    loadEvents(); // THIS IS THE KEY LINE THAT WAS MISSING
+}
+
+// Add scroll button event listeners
+document.getElementById('scrollLeftBtn')?.addEventListener('click', scrollEventsLeft);
+document.getElementById('scrollRightBtn')?.addEventListener('click', scrollEventsRight);
 
 // Initialize everything
 setupCategoryButtons();
