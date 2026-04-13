@@ -3749,12 +3749,14 @@ async function loadNotifications() {
                     html += `<div style="margin-top: 15px; margin-bottom: 10px; padding: 8px 12px; background: #667eea; color: white; border-radius: 8px; font-weight: bold;">📅 ${formattedDate}</div>`;
                     
                     groupedTransactions[date].forEach(t => {
-                        const isSent = t.type === 'sent';
-                        const icon = isSent ? '📤' : '📥';
-                        const amountColor = isSent ? '#dc3545' : '#28a745';
-                        const amountPrefix = isSent ? '-₱' : '+₱';
-                        html += `
-                            <div class="notification-item" onclick="alert('Transaction Details:\\nTo/From: ${t.otherParty}\\nAmount: ${amountPrefix}${t.amount.toLocaleString()}\\nMessage: ${t.message || 'No message'}')">
+    const isSent = t.type === 'sent';
+    const icon = isSent ? '📤' : '📥';
+    const amountColor = isSent ? '#dc3545' : '#28a745';
+    const amountPrefix = isSent ? '-₱' : '+₱';
+    const amountValue = t.amount || 0;
+    
+    html += `
+        <div class="notification-item" onclick="alert('Transaction Details:\\nTo/From: ${t.otherParty}\\nAmount: ${amountPrefix}${(t.amount || 0).toLocaleString()}\\nMessage: ${t.message || 'No message'}')">
                                 <div class="notification-icon">${icon}</div>
                                 <div class="notification-text">
                                     <div class="notification-title">${t.otherParty || 'Transaction'}</div>
@@ -3873,9 +3875,10 @@ async function updateSpendingChart() {
         
         const categoryTotals = {};
         spending.forEach(t => {
-            const category = t.category || 'Other';
-            categoryTotals[category] = (categoryTotals[category] || 0) + t.amount;
-        });
+    const category = t.category || 'Other';
+    const amountValue = t.amount || 0;
+    categoryTotals[category] = (categoryTotals[category] || 0) + amountValue;
+});
         
         const categories = Object.keys(categoryTotals);
         const amounts = categories.map(c => categoryTotals[c]);
@@ -3964,8 +3967,9 @@ async function loadDashboard() {
             const recent = transactions.slice(0, 5);
             let html = '<h3>📊 Recent Activity</h3><div style="font-size: 13px;">';
             recent.forEach(t => {
-                const amount = t.type === 'sent' ? `-₱${t.amount.toLocaleString()}` : `+₱${t.amount.toLocaleString()}`;
-                const color = t.type === 'sent' ? '#dc3545' : '#28a745';
+    const amountValue = t.amount || 0;
+    const amount = t.type === 'sent' ? `-₱${amountValue.toLocaleString()}` : `+₱${amountValue.toLocaleString()}`;
+    const color = t.type === 'sent' ? '#dc3545' : '#28a745';
                 html += `<div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #eee;">
                             <span>${t.otherParty || 'Transaction'}</span>
                             <span style="color: ${color};">${amount}</span>
