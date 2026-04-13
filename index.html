@@ -4097,6 +4097,25 @@ function showSettings() {
     if (banner) banner.textContent = 'QCU SETTINGS';
     loadSettings();
 }
+    function showNotifications() {
+    dashboardPage?.classList.add('hidden');
+    payBillsPage?.classList.add('hidden');
+    transferPage?.classList.add('hidden');
+    confirmationPage?.classList.add('hidden');
+    reviewPage?.classList.add('hidden');
+    successPage?.classList.add('hidden');
+    eventsPage?.classList.add('hidden');
+    profilePage?.classList.add('hidden');
+    notificationsPage?.classList.remove('hidden');
+    settingsPage?.classList.add('hidden');
+    refundPage?.classList.add('hidden');
+    refundConfirmationPage?.classList.add('hidden');
+    historyPage?.classList.add('hidden');
+    if (banner) banner.textContent = 'QCU NOTIFICATIONS';
+    
+    // Load real notifications from database
+    loadNotifications();
+}
 
 function showHistory() {
     dashboardPage?.classList.add('hidden');
