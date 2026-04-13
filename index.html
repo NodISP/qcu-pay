@@ -2823,6 +2823,162 @@ input:checked + .toggle-slider:before {
     color: white;
     font-size: 14px;
 }
+    /* Quick Pay Modal */
+.quickpay-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.8);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 20002;
+}
+
+.quickpay-modal-content {
+    background: white;
+    border-radius: 20px;
+    width: 90%;
+    max-width: 800px;
+    padding: 25px;
+    animation: modalSlideIn 0.3s ease;
+}
+
+.quickpay-modal-header {
+    font-size: 24px;
+    font-weight: bold;
+    margin-bottom: 20px;
+    text-align: center;
+    color: #333;
+}
+
+.quickpay-two-columns {
+    display: flex;
+    gap: 20px;
+}
+
+.quickpay-card {
+    flex: 1;
+    background: #f8f9fa;
+    border-radius: 16px;
+    padding: 20px;
+    border: 1px solid #e0e0e0;
+}
+
+.quickpay-card h3 {
+    font-size: 18px;
+    margin-bottom: 15px;
+    color: #667eea;
+    text-align: center;
+}
+
+.quickpay-qr {
+    text-align: center;
+    padding: 20px;
+}
+
+.quickpay-qr-placeholder {
+    width: 150px;
+    height: 150px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 15px;
+    cursor: pointer;
+    transition: transform 0.3s;
+}
+
+.quickpay-qr-placeholder:hover {
+    transform: scale(1.05);
+}
+
+.quickpay-qr-placeholder span {
+    color: white;
+    font-size: 14px;
+    font-weight: bold;
+}
+
+.quickpay-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 15px;
+}
+
+.quickpay-btn {
+    padding: 12px;
+    border: none;
+    border-radius: 8px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.quickpay-btn-primary {
+    background: #667eea;
+    color: white;
+}
+
+.quickpay-btn-secondary {
+    background: #6c757d;
+    color: white;
+}
+
+.quickpay-items {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.quickpay-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px;
+    background: white;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.3s;
+    border: 1px solid #e0e0e0;
+}
+
+.quickpay-item:hover {
+    transform: translateX(5px);
+    border-color: #667eea;
+    background: #e3f2fd;
+}
+
+.quickpay-item-name {
+    font-weight: bold;
+    color: #333;
+}
+
+.quickpay-item-price {
+    color: #667eea;
+    font-weight: bold;
+}
+
+.quickpay-item-desc {
+    font-size: 11px;
+    color: #666;
+    margin-top: 3px;
+}
+
+.quickpay-close {
+    margin-top: 20px;
+    padding: 12px;
+    background: #dc3545;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: bold;
+    width: 100%;
+}
 </style>
 </head>
 
@@ -2880,10 +3036,10 @@ input:checked + .toggle-slider:before {
         <div id="chartLegend" style="margin-top: 15px; width: 100%; font-size: 12px;"></div>
         <div id="totalSpentDisplay" style="margin-top: 10px; padding-top: 10px; border-top: 1px solid #eee; font-weight: bold; text-align: center;"></div>
     </div>
-    <div class="quickpay">
-        <h3>Quickpay</h3>
-        <p>🍽️</p>
-    </div>
+    <div class="quickpay" style="cursor: pointer; transition: transform 0.2s;">
+    <h3>⚡ Quick Pay</h3>
+    <p>Tap to pay instantly</p>
+</div>
 </div>
                 </div>
                 <div class="middle-panel">
@@ -4639,6 +4795,119 @@ function setupQRCode() {
             document.getElementById('closeOptionsBtn')?.addEventListener('click', () => modal.remove());
         };
     }
+}
+
+    // ========== QUICK PAY FUNCTIONALITY ==========
+function showQuickPay() {
+    const modal = document.createElement('div');
+    modal.className = 'quickpay-modal';
+    modal.innerHTML = `
+        <div class="quickpay-modal-content">
+            <div class="quickpay-modal-header">⚡ Quick Pay</div>
+            <div class="quickpay-two-columns">
+                <!-- Left Card: Receive Money via QR -->
+                <div class="quickpay-card">
+                    <h3>📱 Receive Money</h3>
+                    <div class="quickpay-qr">
+                        <div class="quickpay-qr-placeholder" id="quickpayQrBtn">
+                            <span>📱 My QR</span>
+                        </div>
+                        <div class="quickpay-buttons">
+                            <button class="quickpay-btn quickpay-btn-primary" id="quickpayShowQrBtn">Show My QR Code</button>
+                            <button class="quickpay-btn quickpay-btn-secondary" id="quickpayManualCodeBtn">Enter Code Manually</button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Right Card: Quick Purchase Items -->
+                <div class="quickpay-card">
+                    <h3>🛒 Quick Purchase</h3>
+                    <div class="quickpay-items">
+                        <div class="quickpay-item" data-category="Tuition" data-price="15000" data-name="1st Semester Tuition">
+                            <div>
+                                <div class="quickpay-item-name">📚 1st Semester Tuition</div>
+                                <div class="quickpay-item-desc">Pay your tuition fee instantly</div>
+                            </div>
+                            <div class="quickpay-item-price">₱15,000</div>
+                        </div>
+                        <div class="quickpay-item" data-category="Books" data-price="850" data-name="Calculus 101 Book">
+                            <div>
+                                <div class="quickpay-item-name">📖 Calculus 101 Book</div>
+                                <div class="quickpay-item-desc">Required textbook for Math</div>
+                            </div>
+                            <div class="quickpay-item-price">₱850</div>
+                        </div>
+                        <div class="quickpay-item" data-category="Events" data-price="500" data-name="Music Festival Ticket">
+                            <div>
+                                <div class="quickpay-item-name">🎵 Music Festival Ticket</div>
+                                <div class="quickpay-item-desc">Live bands, food trucks, and fun!</div>
+                            </div>
+                            <div class="quickpay-item-price">₱500</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <button class="quickpay-close" id="closeQuickPayBtn">Close</button>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+    
+    // QR Button - Show My QR Code
+    document.getElementById('quickpayShowQrBtn')?.addEventListener('click', () => {
+        modal.remove();
+        showMyQRCode();
+    });
+    
+    // Manual Code Entry
+    document.getElementById('quickpayManualCodeBtn')?.addEventListener('click', () => {
+        modal.remove();
+        showManualCodeEntry();
+    });
+    
+    // Quick QR placeholder click
+    document.getElementById('quickpayQrBtn')?.addEventListener('click', () => {
+        modal.remove();
+        showMyQRCode();
+    });
+    
+    // Quick purchase items
+    document.querySelectorAll('.quickpay-item').forEach(item => {
+        item.addEventListener('click', async () => {
+            const category = item.dataset.category;
+            const price = parseFloat(item.dataset.price);
+            const name = item.dataset.name;
+            
+            modal.remove();
+            
+            // Check balance first
+            const balanceRes = await fetch(`${API_URL}/balance/${currentUserId}`);
+            const balanceData = await balanceRes.json();
+            
+            if (balanceData.balance < price) {
+                showToast(`Insufficient balance! You need ₱${price.toLocaleString()} for ${name}.`, 'error');
+                return;
+            }
+            
+            showConfirmDialog(
+                `Purchase ${name} for ₱${price.toLocaleString()}?`,
+                async () => {
+                    if (category === 'Events') {
+                        await purchaseEventTicket(99, name, price);
+                    } else {
+                        await payBill(category, price, name);
+                    }
+                    showToast(`Successfully purchased ${name}!`, 'success');
+                    loadDashboard();
+                },
+                () => {
+                    showToast('Purchase cancelled', 'info');
+                }
+            );
+        });
+    });
+    
+    document.getElementById('closeQuickPayBtn')?.addEventListener('click', () => modal.remove());
 }
 
 // ========== STUDENT BILLS CATEGORY BUTTONS ==========
