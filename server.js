@@ -373,7 +373,6 @@ app.get('/api/notifications/:userId', async (req, res) => {
         
         let notifications = [];
         
-        // Daily spending alerts
         if (totalSpent > 1000) {
             notifications.push({
                 type: 'warning',
@@ -392,7 +391,6 @@ app.get('/api/notifications/:userId', async (req, res) => {
             });
         }
         
-        // Low balance alert
         const user = await usersCollection.findOne({ _id: new ObjectId(req.params.userId) });
         if (user && user.balance < 500) {
             notifications.push({
@@ -405,7 +403,8 @@ app.get('/api/notifications/:userId', async (req, res) => {
         
         res.json(notifications);
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        console.error("Notifications error:", error);
+        res.json([]); // Return empty array on error instead of error response
     }
 });
 
