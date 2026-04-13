@@ -2785,13 +2785,14 @@ input:checked + .toggle-slider:before {
                         <div class="label">Available for spending</div>
                     </div>
                 </div>
-                <div class="savings-section">
-                    <h2>Savings</h2>
-                    <div class="savings-box">
-                        <div class="label">Total Savings</div>
+                <div class="balance-section">
+                    <h2>Your Balance</h2>
+                    <div class="remaining-balance">
+                        <div class="label">Current Balance</div>
                         <div class="amount">
-                            <span class="currency">₱</span> 15,000.00
-                        </div>
+                        <span class="currency">₱</span> <span id="payBillsCurrentBalance">0.00</span>
+                    </div>
+                    <div class="label">Available for bills and expenses</div>
                     </div>
                 </div>
                <div class="categories-section">
@@ -3598,6 +3599,8 @@ async function loadDashboard() {
     try {
         const balanceRes = await fetch(`${API_URL}/balance/${currentUserId}`);
         const balanceData = await balanceRes.json();
+        const payBillsBalanceEl = document.getElementById('payBillsCurrentBalance');
+        if (payBillsBalanceEl) payBillsBalanceEl.textContent = balanceData.balance.toFixed(2);
         
         const balanceAmount = formatCurrency(balanceData.balance);
         document.querySelectorAll('.balance .box:first-child .amount, .profile-balance-amount, .remaining-balance .amount').forEach(el => {
