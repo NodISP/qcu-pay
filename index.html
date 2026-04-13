@@ -3002,117 +3002,14 @@ input:checked + .toggle-slider:before {
             </div>
         </div>
 
-        <!-- NOTIFICATIONS PAGE -->
+                <!-- NOTIFICATIONS PAGE -->
         <div id="notificationsPage" class="hidden">
             <div class="notifications-container">
-                <div class="notifications-two-columns">
-                    <div class="recent-transaction-box">
-                        <h3>Most Recent Transaction</h3>
-                        <div class="transaction-card">
-                            <div class="transaction-icon">💸</div>
-                            <div class="transaction-details">
-                                <div class="transaction-name">John Doe</div>
-                                <div class="transaction-number">Account: ****-****-1234</div>
-                                <div class="transaction-amount">- ₱ 1,500.00</div>
-                                <div class="transaction-date">March 24, 2026 - 2:30 PM</div>
-                                <div class="transaction-message">Message: Payment for project</div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="notifications-tab-box">
-                        <h3>Notifications</h3>
-                        <div class="notifications-tab-content">
-                            <div class="notification-section">
-                                <div class="section-title">Today</div>
-                                <div class="notification-item">
-                                    <div class="notification-icon">🔔</div>
-                                    <div class="notification-text">
-                                        <div class="notification-title">Transfer Received</div>
-                                        <div class="notification-desc">You received ₱ 2,500.00 from Jane Smith</div>
-                                        <div class="notification-time">2 hours ago</div>
-                                    </div>
-                                </div>
-                                <div class="notification-item">
-                                    <div class="notification-icon">✅</div>
-                                    <div class="notification-text">
-                                        <div class="notification-title">Bill Payment Successful</div>
-                                        <div class="notification-desc">Your electricity bill payment of ₱ 1,200.00 was successful</div>
-                                        <div class="notification-time">5 hours ago</div>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="notification-section">
-                                <div class="section-title">Yesterday</div>
-                                <div class="notification-item">
-                                    <div class="notification-icon">💳</div>
-                                    <div class="notification-text">
-                                        <div class="notification-title">Cash In</div>
-                                        <div class="notification-desc">You cashed in ₱ 5,000.00 via GCash</div>
-                                        <div class="notification-time">Yesterday, 10:15 AM</div>
-                                    </div>
-                                </div>
-                                <div class="notification-item">
-                                    <div class="notification-icon">📱</div>
-                                    <div class="notification-text">
-                                        <div class="notification-title">Account Login</div>
-                                        <div class="notification-desc">New login detected on your account</div>
-                                        <div class="notification-time">Yesterday, 8:00 AM</div>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="notification-section">
-                                <div class="section-title">History (Before March 2026)</div>
-                                <div class="history-scrollable">
-                                    <div class="notification-item">
-                                        <div class="notification-icon">🔄</div>
-                                        <div class="notification-text">
-                                            <div class="notification-title">Transfer Sent</div>
-                                            <div class="notification-desc">You sent ₱ 3,000.00 to Mike Johnson</div>
-                                            <div class="notification-time">February 28, 2026</div>
-                                        </div>
-                                    </div>
-                                    <div class="notification-item">
-                                        <div class="notification-icon">🎉</div>
-                                        <div class="notification-text">
-                                            <div class="notification-title">Promo Reward</div>
-                                            <div class="notification-desc">You earned ₱ 100.00 cashback from your last transaction</div>
-                                            <div class="notification-time">February 15, 2026</div>
-                                        </div>
-                                    </div>
-                                    <div class="notification-item">
-                                        <div class="notification-icon">💸</div>
-                                        <div class="notification-text">
-                                            <div class="notification-title">Bill Payment</div>
-                                            <div class="notification-desc">Water bill payment of ₱ 800.00</div>
-                                            <div class="notification-time">February 10, 2026</div>
-                                        </div>
-                                    </div>
-                                    <div class="notification-item">
-                                        <div class="notification-icon">📊</div>
-                                        <div class="notification-text">
-                                            <div class="notification-title">Interest Earned</div>
-                                            <div class="notification-desc">You earned ₱ 45.00 interest from savings</div>
-                                            <div class="notification-time">January 30, 2026</div>
-                                        </div>
-                                    </div>
-                                    <div class="notification-item">
-                                        <div class="notification-icon">🎁</div>
-                                        <div class="notification-text">
-                                            <div class="notification-title">Referral Bonus</div>
-                                            <div class="notification-desc">Your friend Sarah joined using your referral code</div>
-                                            <div class="notification-time">January 20, 2026</div>
-                                        </div>
-                                    </div>
-                                    <div class="notification-item">
-                                        <div class="notification-icon">⚠️</div>
-                                        <div class="notification-text">
-                                            <div class="notification-title">Security Alert</div>
-                                            <div class="notification-desc">Your password was changed successfully</div>
-                                            <div class="notification-time">January 5, 2026</div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
+                <div class="notifications-two-columns" style="display: block;">
+                    <div class="notifications-tab-box" style="width: 100%;">
+                        <h3>🔔 Notifications & History</h3>
+                        <div class="notifications-tab-content" id="notificationsList" style="max-height: 70vh; overflow-y: auto;">
+                            <div style="padding: 20px; text-align: center; color: #999;">Loading...</div>
                         </div>
                     </div>
                 </div>
@@ -4405,27 +4302,118 @@ async function loadNotifications() {
         const response = await fetch(`${API_URL}/notifications/${currentUserId}`);
         const notifications = await response.json();
         
-        const notificationContainer = document.querySelector('.notifications');
-        if (notificationContainer && notifications.length > 0) {
-            let html = '<h3>🔔 Notifications</h3>';
-            notifications.forEach(n => {
+        // For dashboard sidebar notification panel (recent only)
+        const sidebarNotification = document.querySelector('.notifications');
+        if (sidebarNotification) {
+            if (notifications && notifications.length > 0) {
+                let html = '<h3>🔔 Recent Alerts</h3>';
+                notifications.slice(0, 3).forEach(n => {
+                    html += `
+                        <div style="padding: 10px; margin-bottom: 8px; background: ${n.type === 'critical' ? '#ffebee' : '#fff3cd'}; border-radius: 8px; border-left: 4px solid ${n.type === 'critical' ? '#dc3545' : '#ffc107'};">
+                            <strong style="font-size: 12px;">${n.title}</strong>
+                            <div style="font-size: 11px;">${n.message}</div>
+                            <div style="font-size: 10px; color: #999; margin-top: 5px;">${n.time}</div>
+                        </div>
+                    `;
+                });
+                sidebarNotification.innerHTML = html;
+            } else {
+                sidebarNotification.innerHTML = '<h3>🔔 Notifications</h3><div style="padding: 15px; text-align: center; color: #999;">No new alerts</div>';
+            }
+        }
+        
+        // For full notifications page - get ALL transactions for history
+        const transactionsRes = await fetch(`${API_URL}/transactions/${currentUserId}`);
+        const transactions = await transactionsRes.json();
+        
+        const fullNotificationList = document.getElementById('notificationsList');
+        if (fullNotificationList) {
+            // Separate data by type
+            const alerts = notifications || [];
+            
+            // Group transactions by date
+            const groupedTransactions = {};
+            transactions.forEach(t => {
+                if (!groupedTransactions[t.date]) groupedTransactions[t.date] = [];
+                groupedTransactions[t.date].push(t);
+            });
+            
+            // Sort dates descending
+            const sortedDates = Object.keys(groupedTransactions).sort().reverse();
+            
+            let html = '';
+            
+            // Show alerts section first (if any)
+            if (alerts.length > 0) {
                 html += `
-                    <div style="padding: 12px; margin-bottom: 10px; background: ${n.type === 'critical' ? '#ffebee' : '#fff3cd'}; border-radius: 8px; border-left: 4px solid ${n.type === 'critical' ? '#dc3545' : '#ffc107'};">
-                        <strong style="color: ${n.type === 'critical' ? '#dc3545' : '#856404'};">${n.title}</strong>
-                        <div style="font-size: 13px; margin-top: 5px;">${n.message}</div>
-                        <div style="font-size: 11px; color: #999; margin-top: 5px;">${n.time}</div>
+                    <div class="notification-section">
+                        <div class="section-title">⚠️ ALERTS</div>
+                        ${alerts.map(n => `
+                            <div class="notification-item" style="background: ${n.type === 'critical' ? '#ffebee' : '#fff3cd'}; border-left: 4px solid ${n.type === 'critical' ? '#dc3545' : '#ffc107'};">
+                                <div class="notification-icon">${n.type === 'critical' ? '🔴' : '⚠️'}</div>
+                                <div class="notification-text">
+                                    <div class="notification-title">${n.title}</div>
+                                    <div class="notification-desc">${n.message}</div>
+                                    <div class="notification-time">${n.time}</div>
+                                </div>
+                            </div>
+                        `).join('')}
                     </div>
                 `;
-            });
-            notificationContainer.innerHTML = html;
-        } else if (notificationContainer) {
-            notificationContainer.innerHTML = '<h3>🔔 Notifications</h3><div style="padding: 15px; text-align: center; color: #999;">No new notifications</div>';
+            }
+            
+            // Show transaction history grouped by date
+            if (sortedDates.length > 0) {
+                html += `<div class="notification-section"><div class="section-title">📜 TRANSACTION HISTORY</div>`;
+                
+                for (const date of sortedDates) {
+                    const dateObj = new Date(date);
+                    const formattedDate = dateObj.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+                    
+                    html += `
+                        <div style="margin-top: 15px; margin-bottom: 10px; padding: 8px 12px; background: #667eea; color: white; border-radius: 8px; font-weight: bold;">
+                            📅 ${formattedDate}
+                        </div>
+                    `;
+                    
+                    groupedTransactions[date].forEach(t => {
+                        const isSent = t.type === 'sent';
+                        const icon = isSent ? '📤' : '📥';
+                        const amountColor = isSent ? '#dc3545' : '#28a745';
+                        const amountPrefix = isSent ? '-₱' : '+₱';
+                        
+                        html += `
+                            <div class="notification-item" onclick="alert('Transaction Details:\\nTo/From: ${t.otherParty}\\nAmount: ${amountPrefix}${t.amount.toLocaleString()}\\nMessage: ${t.message || 'No message'}')">
+                                <div class="notification-icon">${icon}</div>
+                                <div class="notification-text">
+                                    <div class="notification-title">${t.otherParty || 'Transaction'}</div>
+                                    <div class="notification-desc">${t.message || 'No message'}</div>
+                                    <div class="notification-time">${t.time}</div>
+                                </div>
+                                <div style="font-weight: bold; color: ${amountColor};">${amountPrefix}${t.amount.toLocaleString()}</div>
+                            </div>
+                        `;
+                    });
+                }
+                
+                html += `</div>`;
+            }
+            
+            if (html === '') {
+                fullNotificationList.innerHTML = '<div style="padding: 40px; text-align: center; color: #999;">🔔 No notifications or transactions yet.<br>Your activity will appear here.</div>';
+            } else {
+                fullNotificationList.innerHTML = html;
+            }
         }
+        
     } catch (error) {
         console.error("Error loading notifications:", error);
+        const fullNotificationList = document.getElementById('notificationsList');
+        if (fullNotificationList) {
+            fullNotificationList.innerHTML = '<div style="padding: 40px; text-align: center; color: #999;">⚠️ Error loading notifications</div>';
+        }
     }
 }
-
 // ========== LOAD TRANSACTION HISTORY ==========
 async function loadTransactionHistory() {
     try {
