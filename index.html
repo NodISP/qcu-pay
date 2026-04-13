@@ -4743,23 +4743,29 @@ function renderEventsCards() {
     const container = document.getElementById('eventsCards');
     if (!container) return;
     
-    container.innerHTML = allEvents.map(event => `
-        <div class="event-card" data-id="${event.id}" data-name="${event.name}" data-fee="${event.fee}" data-free="${event.isFree}">
+    console.log("Events data:", allEvents); // Debug: Check what events are loaded
+    
+    container.innerHTML = allEvents.map(event => {
+        const feeNumber = Number(event.fee) || 0;
+        const displayFee = feeNumber > 0 ? `₱${feeNumber.toLocaleString()}` : 'FREE';
+        
+        return `
+        <div class="event-card" data-id="${event.id}" data-name="${event.name}" data-fee="${feeNumber}" data-free="${event.isFree}">
             <div class="event-img">🎉 ${event.name.substring(0, 2)}</div>
             <div class="event-details">
                 <div class="event-name">${event.name}</div>
                 <div class="event-date">📅 ${event.date}</div>
                 <div class="event-location">📍 ${event.location}</div>
                 <div class="event-fee ${event.isFree ? 'free' : 'paid'}">
-                    ${event.isFree ? '🎟️ FREE' : `💰 ₱${event.fee.toLocaleString()}`}
+                    ${event.isFree ? '🎟️ FREE' : `💰 ${displayFee}`}
                 </div>
                 <div class="event-description" style="font-size: 12px; color: #666; margin-top: 8px;">${event.description}</div>
-                <button class="buy-ticket-btn" data-id="${event.id}" data-name="${event.name}" data-fee="${Number(event.fee) || 0}" data-free="${event.isFree}" style="margin-top: 12px; padding: 8px 16px; background: #667eea; color: white; border: none; border-radius: 6px; cursor: pointer; width: 100%; font-weight: bold;">
-                    ${event.isFree ? '🎟️ Register Free' : `💳 Buy Ticket - ₱${event.fee.toLocaleString()}`}
+                <button class="buy-ticket-btn" data-id="${event.id}" data-name="${event.name}" data-fee="${feeNumber}" data-free="${event.isFree}" style="margin-top: 12px; padding: 8px 16px; background: #667eea; color: white; border: none; border-radius: 6px; cursor: pointer; width: 100%; font-weight: bold;">
+                    ${event.isFree ? '🎟️ Register Free' : `💳 Buy Ticket - ${displayFee}`}
                 </button>
             </div>
         </div>
-    `).join('');
+    `}).join('');
     
     // Add event listeners to buy buttons
     document.querySelectorAll('.buy-ticket-btn').forEach(btn => {
@@ -4769,20 +4775,30 @@ function renderEventsCards() {
             const eventName = btn.dataset.name;
             const fee = Number(btn.dataset.fee) || 0;
             const isFree = btn.dataset.free === 'true';
-
+            
+            console.log("Buying ticket:", { eventId, eventName, fee, isFree }); // Debug
+            
             if (isNaN(fee) || fee === undefined) {
                 showToast('Invalid ticket price', 'error');
                 return;
             }
-            if (isFree) {
+            
+            if (isFree || fee === 0) {
                 showConfirmDialog(
                     `Confirm registration for ${eventName} (FREE EVENT)`,
                     async () => {
-                        await purchaseEventTicket(eventId, eventName, fee);
+                        await purchaseEventTicket(eventId, eventName, 0);
                     },
                     () => showToast('Registration cancelled', 'info')
                 );
             } else {
+                // Check balance first
+                const balanceRes = await fetch(`${API_URL}/balance/${currentUserId}`);
+                const balanceData = await balanceRes.json();
+                if (balanceData.balance < fee) {
+                    showToast(`Insufficient balance! You need ₱${fee.toLocaleString()} for this event.`, 'error');
+                    return;
+                }
                 showConfirmDialog(
                     `Purchase ticket for ${eventName}?\n\n💰 Price: ₱${fee.toLocaleString()}\n\nClick Yes to confirm purchase.`,
                     async () => {
