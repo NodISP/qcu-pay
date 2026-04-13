@@ -269,9 +269,9 @@ app.get('/api/users', async (req, res) => {
 app.get('/api/events', async (req, res) => {
     res.json([
         { name: "Music Festival", date: "April 15, 2026", location: "Central Park", fee: "Free", isFree: true },
-        { name: "Tech Conference", date: "April 20, 2026", location: "Convention Center", fee: "₱500", isFree: false },
+        { name: "Tech Conference", date: "April 20, 2026", location: "Convention Center", fee: 500, isFree: false },
         { name: "Food Expo", date: "April 25, 2026", location: "Trade Hall", fee: "Free", isFree: true },
-        { name: "Art Exhibition", date: "May 1, 2026", location: "Art Museum", fee: "₱200", isFree: false },
+        { name: "Art Exhibition", date: "May 1, 2026", location: "Art Museum", fee: 200, isFree: false },
         { name: "Sports Tournament", date: "May 5, 2026", location: "Stadium", fee: "Free", isFree: true }
     ]);
 });
