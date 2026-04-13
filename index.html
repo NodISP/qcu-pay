@@ -2617,9 +2617,9 @@ input:checked + .toggle-slider:before {
                             <div class="label">Current Balance</div>
                             <div class="amount">₱25,000.00</div>
                         </div>
-                        <div class="box">
-                            <div class="label">Remaining Balance</div>
-                            <div class="amount">₱-3,500.00</div>
+                       <div class="box">
+                            <div class="label">Net Change Today</div>
+                            <div class="amount" id="netChangeToday" style="color: #28a745;">₱0.00</div>
                         </div>
                     </div>
                     <div class="progress-section">
@@ -3577,6 +3577,18 @@ document.querySelectorAll('.balance .box:first-child .amount').forEach(el => {
     } catch (error) {
         console.error("Error loading dashboard:", error);
     }
+}
+    // Calculate net change today (received - sent)
+const today = new Date().toISOString().split('T')[0];
+const todayReceived = transactions.filter(t => t.date === today && t.type === 'received').reduce((sum, t) => sum + t.amount, 0);
+const todaySent = transactions.filter(t => t.date === today && t.type === 'sent').reduce((sum, t) => sum + t.amount, 0);
+const netChange = todayReceived - todaySent;
+
+const netChangeEl = document.getElementById('netChangeToday');
+if (netChangeEl) {
+    const prefix = netChange >= 0 ? '+' : '-';
+    netChangeEl.textContent = `${prefix} ${formatCurrency(Math.abs(netChange))}`;
+    netChangeEl.style.color = netChange >= 0 ? '#28a745' : '#dc3545';
 }
 // ========== CUSTOM TOAST NOTIFICATION ==========
 function showToast(message, type = 'info', duration = 3000) {
