@@ -2373,6 +2373,137 @@ input:checked + .toggle-slider:before {
         width: auto;
     }
 }
+/* Custom Toast Notification */
+.toast-notification {
+    position: fixed;
+    bottom: 30px;
+    right: 30px;
+    z-index: 10000;
+    min-width: 300px;
+    max-width: 400px;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+    overflow: hidden;
+    animation: slideInRight 0.3s ease;
+}
+
+.toast-notification.hide {
+    animation: slideOutRight 0.3s ease forwards;
+}
+
+@keyframes slideInRight {
+    from { transform: translateX(100%); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
+}
+
+@keyframes slideOutRight {
+    from { transform: translateX(0); opacity: 1; }
+    to { transform: translateX(100%); opacity: 0; }
+}
+
+.toast-header {
+    padding: 15px 20px;
+    color: white;
+    font-weight: bold;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.toast-header.success { background: #4caf50; }
+.toast-header.error { background: #dc3545; }
+.toast-header.warning { background: #ff9800; }
+.toast-header.info { background: #2196f3; }
+
+.toast-close {
+    background: none;
+    border: none;
+    color: white;
+    font-size: 20px;
+    cursor: pointer;
+}
+
+.toast-body {
+    padding: 15px 20px;
+    color: #333;
+    font-size: 14px;
+}
+
+.toast-progress {
+    height: 3px;
+    background: rgba(255,255,255,0.5);
+    animation: progress 3s linear forwards;
+}
+
+@keyframes progress {
+    from { width: 100%; }
+    to { width: 0%; }
+}
+    .confirm-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10001;
+}
+
+.confirm-modal-content {
+    background: white;
+    border-radius: 12px;
+    width: 90%;
+    max-width: 400px;
+    overflow: hidden;
+    animation: modalSlideIn 0.2s ease;
+}
+
+@keyframes modalSlideIn {
+    from { transform: translateY(-50px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+}
+
+.confirm-modal-header {
+    background: #ff9800;
+    color: white;
+    padding: 15px 20px;
+    font-weight: bold;
+}
+
+.confirm-modal-body {
+    padding: 20px;
+    color: #333;
+}
+
+.confirm-modal-footer {
+    padding: 15px 20px;
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+    border-top: 1px solid #eee;
+}
+
+.confirm-btn-cancel, .confirm-btn-ok {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: bold;
+}
+
+.confirm-btn-cancel {
+    background: #6c757d;
+    color: white;
+}
+
+.confirm-btn-ok {
+    background: #dc3545;
+    color: white;
+}
 </style>
 </head>
 
@@ -3238,6 +3369,11 @@ async function loadDashboard() {
         document.querySelectorAll('.balance .box:first-child .amount, .profile-balance-amount, .remaining-balance .amount').forEach(el => {
             if (el) el.textContent = balanceAmount;
         });
+
+        // This updates the Current Balance box
+document.querySelectorAll('.balance .box:first-child .amount').forEach(el => {
+    if (el) el.textContent = balanceAmount;
+});
         
         const greetingEl = document.querySelector('.greeting h2');
         if (greetingEl) greetingEl.textContent = `Good day, ${balanceData.username || 'Student'}!`;
@@ -3282,12 +3418,47 @@ async function loadDashboard() {
         
         const emailSpan = document.querySelector('.profile-detail-value');
         if (emailSpan) emailSpan.textContent = user.email;
+
+         await loadNotifications();
+        await checkDailySpending();
         
     } catch (error) {
         console.error("Error loading dashboard:", error);
     }
 }
-
+// ========== CUSTOM TOAST NOTIFICATION ==========
+function showToast(message, type = 'info', duration = 3000) {
+    // Remove existing toast
+    const existingToast = document.querySelector('.toast-notification');
+    if (existingToast) existingToast.remove();
+    
+    const toast = document.createElement('div');
+    toast.className = 'toast-notification';
+    toast.innerHTML = `
+        <div class="toast-header ${type}">
+            <span>${type === 'success' ? '✅' : type === 'error' ? '❌' : type === 'warning' ? '⚠️' : 'ℹ️'} ${type.toUpperCase()}</span>
+            <button class="toast-close">&times;</button>
+        </div>
+        <div class="toast-body">${message}</div>
+        <div class="toast-progress"></div>
+    `;
+    
+    document.body.appendChild(toast);
+    
+    // Close button
+    toast.querySelector('.toast-close').onclick = () => {
+        toast.classList.add('hide');
+        setTimeout(() => toast.remove(), 400);
+    };
+    
+    // Auto close
+    setTimeout(() => {
+        if (toast.parentNode) {
+            toast.classList.add('hide');
+            setTimeout(() => toast.remove(), 400);
+        }
+    }, duration);
+}
 // ========== LOAD USERS FOR TRANSFER ==========
 async function loadUsers() {
     try {
@@ -3323,7 +3494,7 @@ async function loadUsers() {
 // ========== PAY BILLS FUNCTIONALITY ==========
 async function payBill(category, amount, accountNumber = null) {
     if (!amount || amount <= 0) {
-        alert('Please enter a valid amount');
+        showToast('Please enter a valid amount', 'error');
         return false;
     }
     
@@ -3331,10 +3502,28 @@ async function payBill(category, amount, accountNumber = null) {
     const balanceData = await balanceRes.json();
     
     if (balanceData.balance < amount) {
-        alert(`Insufficient balance! You only have ₱${balanceData.balance.toFixed(2)}`);
+        showToast(`Insufficient balance! You only have ₱${balanceData.balance.toFixed(2)}`, 'error');
         return false;
     }
     
+    // Show confirmation if amount > 500
+    if (amount > 500) {
+        showConfirmDialog(
+            `You are about to pay ₱${amount.toLocaleString()} for ${category}. This exceeds ₱500.`,
+            async () => {
+                await processPayment(category, amount, accountNumber);
+            },
+            () => {
+                showToast('Payment cancelled', 'info');
+            }
+        );
+        return;
+    }
+    
+    await processPayment(category, amount, accountNumber);
+}
+
+async function processPayment(category, amount, accountNumber) {
     try {
         const response = await fetch(`${API_URL}/pay-bill`, {
             method: 'POST',
@@ -3350,15 +3539,15 @@ async function payBill(category, amount, accountNumber = null) {
         const data = await response.json();
         
         if (data.success) {
-            alert(`✅ ${data.message}\nNew balance: ₱${data.newBalance.toFixed(2)}`);
+            showToast(`✅ ${data.message}\nNew balance: ₱${data.newBalance.toFixed(2)}`, 'success');
             loadDashboard();
             return true;
         } else {
-            alert(`❌ Payment failed: ${data.error}`);
+            showToast(`❌ Payment failed: ${data.error}`, 'error');
             return false;
         }
     } catch (error) {
-        alert('Error processing payment');
+        showToast('Error processing payment', 'error');
         return false;
     }
 }
@@ -3374,7 +3563,42 @@ const studentBills = [
     { name: "🚌 School Bus", category: "Transportation" },
     { name: "💻 Laptop/Tablet", category: "Device" }
 ];
-
+// ========== CONFIRMATION MODAL ==========
+function showConfirmDialog(message, onConfirm, onCancel) {
+    // Remove existing modal
+    const existingModal = document.querySelector('.confirm-modal');
+    if (existingModal) existingModal.remove();
+    
+    const modal = document.createElement('div');
+    modal.className = 'confirm-modal';
+    modal.innerHTML = `
+        <div class="confirm-modal-content">
+            <div class="confirm-modal-header">
+                <span>⚠️ Confirm Transaction</span>
+            </div>
+            <div class="confirm-modal-body">
+                <p>${message}</p>
+                <p style="font-size: 12px; color: #ff9800; margin-top: 10px;">Are you sure you want to continue?</p>
+            </div>
+            <div class="confirm-modal-footer">
+                <button class="confirm-btn-cancel">Cancel</button>
+                <button class="confirm-btn-ok">Yes, Continue</button>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+    
+    modal.querySelector('.confirm-btn-cancel').onclick = () => {
+        modal.remove();
+        if (onCancel) onCancel();
+    };
+    
+    modal.querySelector('.confirm-btn-ok').onclick = () => {
+        modal.remove();
+        if (onConfirm) onConfirm();
+    };
+}
 // ========== SETTINGS FUNCTIONALITY ==========
 async function loadSettings() {
     try {
@@ -3410,9 +3634,9 @@ async function saveSettings() {
             body: JSON.stringify(settings)
         });
         
-        alert('Settings saved!');
+        showToast('Settings saved!', 'success')
     } catch (error) {
-        alert('Error saving settings');
+        showToast('Error saving settings', 'error')
     }
 }
 
@@ -3570,6 +3794,7 @@ function showHistory() {
     refundConfirmationPage?.classList.add('hidden');
     historyPage?.classList.remove('hidden');
     if (banner) banner.textContent = 'QCU HISTORY';
+    loadTransactionHistory();
 }
 
 function showRefund() {
@@ -3619,7 +3844,7 @@ document.getElementById('enterButton')?.addEventListener('click', () => {
     const amount = document.getElementById('amountInput')?.value;
     const message = document.getElementById('messageInput')?.value;
     if (!amount || amount <= 0) {
-        alert('Please enter a valid amount');
+        showToast('Please enter a valid amount', 'error')
         return;
     }
     document.getElementById('reviewUserName').textContent = selectedRecipient?.name;
@@ -3633,6 +3858,28 @@ document.getElementById('confirmButton')?.addEventListener('click', async () => 
     const amount = document.getElementById('amountInput')?.value;
     const message = document.getElementById('messageInput')?.value;
     
+    if (!amount || amount <= 0) {
+        showToast('Please enter a valid amount', 'error');
+        return;
+    }
+    
+    if (parseFloat(amount) > 500) {
+        showConfirmDialog(
+            `You are about to send ₱${parseFloat(amount).toLocaleString()}. This exceeds ₱500.`,
+            async () => {
+                await executeTransfer(amount, message);
+            },
+            () => {
+                showToast('Transfer cancelled', 'info');
+            }
+        );
+        return;
+    }
+    
+    await executeTransfer(amount, message);
+});
+
+async function executeTransfer(amount, message) {
     const result = await performTransfer(selectedRecipient?.email, amount, message);
     if (result.success) {
         document.getElementById('successUserName').textContent = selectedRecipient?.name;
@@ -3642,10 +3889,11 @@ document.getElementById('confirmButton')?.addEventListener('click', async () => 
         document.getElementById('amountInput').value = '';
         document.getElementById('messageInput').value = '';
         loadDashboard();
+        showToast('Transfer successful!', 'success');
     } else {
-        alert('Transfer failed: ' + (result.error || 'Unknown error'));
+        showToast('Transfer failed: ' + (result.error || 'Unknown error'), 'error');
     }
-});
+}
 
 // Student Bills Category Buttons
 function setupCategoryButtons() {
@@ -3681,10 +3929,10 @@ document.getElementById('editInfoBtn')?.addEventListener('click', async () => {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ fullName: newName, address: newAddress, class: newClass })
             });
-            alert('Profile updated!');
+            showToast('Profile updated!', 'success')
             loadDashboard();
         } catch (error) {
-            alert('Update failed');
+            showToast('Update failed', 'error')
         }
     }
 });
@@ -3696,12 +3944,12 @@ document.getElementById('changePasswordBtn')?.addEventListener('click', async ()
     if (!currentPassword) return;
     const newPassword = prompt("Enter new password (min 6 characters):");
     if (!newPassword || newPassword.length < 6) {
-        alert("Password must be at least 6 characters");
+        showToast("Password must be at least 6 characters", 'error')
         return;
     }
     const confirmPassword = prompt("Confirm new password:");
     if (newPassword !== confirmPassword) {
-        alert("Passwords don't match");
+        showToast("Passwords don't match", 'error')
         return;
     }
     try {
@@ -3711,9 +3959,9 @@ document.getElementById('changePasswordBtn')?.addEventListener('click', async ()
             body: JSON.stringify({ currentPassword, newPassword })
         });
         const data = await response.json();
-        alert(data.success ? "Password changed successfully!" : data.error);
+        showToast(data.success ? "Password changed successfully!" : data.error, data.success ? 'success' : 'error')
     } catch (error) {
-        alert("Error changing password");
+        showToast("Error changing password", 'error')
     }
 });
 
@@ -3730,13 +3978,13 @@ document.getElementById('changeEmailBtn')?.addEventListener('click', async () =>
         });
         const data = await response.json();
         if (data.success) {
-            alert(`Email changed to ${data.newEmail}`);
+            showToast(`Email changed to ${data.newEmail}`, 'success');
             localStorage.setItem('userEmail', data.newEmail);
         } else {
-            alert(data.error);
+            showToast(data.error, 'error');
         }
     } catch (error) {
-        alert("Error changing email");
+        showToast("Error changing email", 'error');
     }
 });
 
@@ -3753,23 +4001,25 @@ document.getElementById('deleteAccountBtn')?.addEventListener('click', async () 
         });
         const data = await response.json();
         if (data.success) {
-            alert("Account deleted. Goodbye!");
-            localStorage.clear();
-            window.location.href = "Login.html";
-        } else {
-            alert(data.error);
-        }
+    showToast("Account deleted. Goodbye!", 'success');
+    setTimeout(() => {
+        localStorage.clear();
+        window.location.href = "Login.html";
+    }, 1500);
+} else {
+    showToast(data.error, 'error');
+}
     } catch (error) {
-        alert("Error deleting account");
+        showToast("Error deleting account", 'error');
     }
 });
 
 document.getElementById('verifyEmailBtn')?.addEventListener('click', () => {
-    alert(`Verification email sent to ${localStorage.getItem('userEmail')}`);
+    showToast(`Verification email sent to ${localStorage.getItem('userEmail')}`, 'success')
 });
 
 document.getElementById('currencySelect')?.addEventListener('change', (e) => {
-    alert(`Currency preference saved: ${e.target.value}`);
+    showToast(`Currency preference saved: ${e.target.value}`, 'success')
 });
 
 // Refund submission
@@ -3781,11 +4031,11 @@ document.getElementById('submitRefundBtn')?.addEventListener('click', () => {
     const reason = document.getElementById('refundReason')?.value;
     
     if (!name || !email || !category || !amount || !reason) {
-        alert("Please fill all required fields");
+        showToast("Please fill all required fields", 'error')
         return;
     }
     
-    alert(`Refund request submitted!\n\nName: ${name}\nEmail: ${email}\nCategory: ${category}\nAmount: ₱${amount}\nReason: ${reason}\n\nWe will process your request within 3-5 business days.`);
+  showToast(`Your refund request has been submitted! We will process it within 3-5 business days.`, 'success')
     
     document.getElementById('refundName').value = '';
     document.getElementById('refundEmail').value = '';
@@ -3908,41 +4158,6 @@ async function checkDailySpending() {
     }
 }
 
-// ========== UPDATE loadDashboard to include notifications ==========
-// Add this line inside your existing loadDashboard function:
-async function loadDashboard() {
-    try {
-        // ... existing code ...
-        
-        // Add these lines:
-        await loadNotifications();
-        await checkDailySpending();
-        
-        // ... rest of existing code ...
-    } catch (error) {
-        console.error("Error loading dashboard:", error);
-    }
-}
-
-// ========== UPDATE loadTransactionHistory when history page opens ==========
-// Modify showHistory function:
-function showHistory() {
-    dashboardPage?.classList.add('hidden');
-    payBillsPage?.classList.add('hidden');
-    transferPage?.classList.add('hidden');
-    confirmationPage?.classList.add('hidden');
-    reviewPage?.classList.add('hidden');
-    successPage?.classList.add('hidden');
-    eventsPage?.classList.add('hidden');
-    profilePage?.classList.add('hidden');
-    notificationsPage?.classList.add('hidden');
-    settingsPage?.classList.add('hidden');
-    refundPage?.classList.add('hidden');
-    refundConfirmationPage?.classList.add('hidden');
-    historyPage?.classList.remove('hidden');
-    if (banner) banner.textContent = 'QCU HISTORY';
-    loadTransactionHistory(); // Load transactions when history page opens
-}
 // Initialize everything
 setupCategoryButtons();
 loadDashboard();
