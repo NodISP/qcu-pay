@@ -2873,11 +2873,12 @@ input:checked + .toggle-slider:before {
                             <div class="amount" id="netChangeToday" style="color: #28a745;">₱0.00</div>
                         </div>
                     </div>
-                    <div class="progress-section">
+                   <div class="progress-section">
     <div class="progress">
         <h3>Spending by Category</h3>
         <canvas id="spendingChart" width="200" height="200"></canvas>
-        <div id="chartLegend" style="margin-top: 15px; font-size: 12px;"></div>
+        <div id="chartLegend" style="margin-top: 15px; width: 100%; font-size: 12px;"></div>
+        <div id="totalSpentDisplay" style="margin-top: 10px; padding-top: 10px; border-top: 1px solid #eee; font-weight: bold; text-align: center;"></div>
     </div>
     <div class="quickpay">
         <h3>Quickpay</h3>
@@ -3843,36 +3844,48 @@ let spendingChart = null;
 async function updateSpendingChart() {
     try {
         const response = await fetch(`${API_URL}/transactions/${currentUserId}`);
-        const transactions = await response.json();
+        let transactions = await response.json();
         
-        const spending = transactions.filter(t => t.type === 'sent');
+        // Filter out invalid transactions and only sent (spending)
+        transactions = transactions.filter(t => t.amount && typeof t.amount === 'number' && !isNaN(t.amount) && t.type === 'sent');
         
-        if (spending.length === 0) {
-            const ctx = document.getElementById('spendingChart')?.getContext('2d');
-            if (ctx) {
-                if (spendingChart) spendingChart.destroy();
-                ctx.clearRect(0, 0, 200, 200);
-                ctx.font = '12px Arial';
-                ctx.fillStyle = '#999';
-                ctx.fillText('No spending yet', 60, 100);
-            }
+        const canvas = document.getElementById('spendingChart');
+        if (!canvas) {
+            console.log("Canvas not found");
             return;
         }
         
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return;
+        
+        if (transactions.length === 0) {
+            if (spendingChart) spendingChart.destroy();
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.font = '12px Arial';
+            ctx.fillStyle = '#999';
+            ctx.fillText('No spending yet', 60, 100);
+            
+            // Clear legend
+            const legendDiv = document.getElementById('chartLegend');
+            if (legendDiv) legendDiv.innerHTML = '';
+            const totalDiv = document.getElementById('totalSpentDisplay');
+            if (totalDiv) totalDiv.innerHTML = '';
+            return;
+        }
+        
+        // Group by category
         const categoryTotals = {};
-        spending.forEach(t => {
-    const category = t.category || 'Other';
-    const amountValue = t.amount || 0;
-    categoryTotals[category] = (categoryTotals[category] || 0) + amountValue;
-});
+        transactions.forEach(t => {
+            const category = t.category || 'Other';
+            categoryTotals[category] = (categoryTotals[category] || 0) + t.amount;
+        });
         
         const categories = Object.keys(categoryTotals);
         const amounts = categories.map(c => categoryTotals[c]);
+        const totalSpent = amounts.reduce((a, b) => a + b, 0);
         const colors = ['#667eea', '#f093fb', '#4facfe', '#43e97b', '#fa709a', '#30cfd0', '#a8edea', '#ff9a9e', '#f59e0b', '#ef4444'];
         
-        const ctx = document.getElementById('spendingChart')?.getContext('2d');
-        if (!ctx) return;
-        
+        // Create pie chart
         if (spendingChart) spendingChart.destroy();
         
         spendingChart = new Chart(ctx, {
@@ -3889,14 +3902,13 @@ async function updateSpendingChart() {
                 responsive: true,
                 maintainAspectRatio: true,
                 plugins: {
-                    legend: { position: 'bottom', labels: { font: { size: 10 } } },
+                    legend: { display: false }, // Hide default legend, we'll make our own
                     tooltip: {
                         callbacks: {
                             label: function(context) {
                                 const label = context.label || '';
                                 const value = context.raw || 0;
-                                const total = context.dataset.data.reduce((a, b) => a + b, 0);
-                                const percentage = ((value / total) * 100).toFixed(1);
+                                const percentage = ((value / totalSpent) * 100).toFixed(1);
                                 return `${label}: ₱${value.toLocaleString()} (${percentage}%)`;
                             }
                         }
@@ -3904,6 +3916,33 @@ async function updateSpendingChart() {
                 }
             }
         });
+        
+        // Build custom legend
+        const legendDiv = document.getElementById('chartLegend');
+        if (legendDiv) {
+            let legendHtml = '<div style="display: flex; flex-wrap: wrap; gap: 10px; justify-content: center;">';
+            categories.forEach((category, index) => {
+                const amount = amounts[index];
+                const percentage = ((amount / totalSpent) * 100).toFixed(1);
+                legendHtml += `
+                    <div style="display: flex; align-items: center; gap: 5px;">
+                        <div style="width: 12px; height: 12px; background: ${colors[index % colors.length]}; border-radius: 50%;"></div>
+                        <span style="font-size: 11px;">${category}</span>
+                        <span style="font-size: 11px; font-weight: bold;">${percentage}%</span>
+                        <span style="font-size: 10px; color: #666;">(₱${amount.toLocaleString()})</span>
+                    </div>
+                `;
+            });
+            legendHtml += '</div>';
+            legendDiv.innerHTML = legendHtml;
+        }
+        
+        // Add total spent display
+        const totalDiv = document.getElementById('totalSpentDisplay');
+        if (totalDiv) {
+            totalDiv.innerHTML = `💰 Total Spent: ₱${totalSpent.toLocaleString()}`;
+        }
+        
     } catch (error) {
         console.error("Error updating spending chart:", error);
     }
