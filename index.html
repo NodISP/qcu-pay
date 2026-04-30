@@ -3324,6 +3324,234 @@ body.dark-mode .settings-action-btn {
 body.dark-mode .settings-action-btn:hover {
     background: #5a5a9a;
 }
+
+/* ===== DARK MODE - COMPLETE TEXT FIXES ===== */
+body.dark-mode,
+body.dark-mode * {
+    color-scheme: dark;
+}
+
+/* Catch ALL text elements */
+body.dark-mode p,
+body.dark-mode h1,
+body.dark-mode h2,
+body.dark-mode h3,
+body.dark-mode h4,
+body.dark-mode h5,
+body.dark-mode h6,
+body.dark-mode span:not(.notification-icon):not(.transaction-icon),
+body.dark-mode div:not(.notification-icon):not(.transaction-icon),
+body.dark-mode label,
+body.dark-mode li,
+body.dark-mode td,
+body.dark-mode th,
+body.dark-mode small,
+body.dark-mode strong,
+body.dark-mode b,
+body.dark-mode em,
+body.dark-mode .label,
+body.dark-mode .amount,
+body.dark-mode .user-name,
+body.dark-mode .user-number,
+body.dark-mode .transaction-name,
+body.dark-mode .transaction-number,
+body.dark-mode .transaction-message,
+body.dark-mode .notification-title,
+body.dark-mode .notification-desc,
+body.dark-mode .notification-time,
+body.dark-mode .event-name,
+body.dark-mode .event-date,
+body.dark-mode .event-location,
+body.dark-mode .event-fee,
+body.dark-mode .category-btn,
+body.dark-mode .filter-group label,
+body.dark-mode .history-filters label,
+body.dark-mode .stat-label,
+body.dark-mode .stat-value,
+body.dark-mode .alert-suggestion,
+body.dark-mode .detail-label,
+body.dark-mode .detail-value,
+body.dark-mode .confirm-label,
+body.dark-mode .confirm-value,
+body.dark-mode .refund-note,
+body.dark-mode .file-hint,
+body.dark-mode .currency-note,
+body.dark-mode .delete-note,
+body.dark-mode .verification-note,
+body.dark-mode .verification-title,
+body.dark-mode .verification-desc,
+body.dark-mode .settings-item-label,
+body.dark-mode .settings-item-desc,
+body.dark-mode .profile-info-label,
+body.dark-mode .profile-info-value,
+body.dark-mode .greeting p,
+body.dark-mode .greeting .date,
+body.dark-mode .box .label,
+body.dark-mode .box .amount,
+body.dark-mode .savings .amount,
+body.dark-mode .savings h3,
+body.dark-mode .activity h3,
+body.dark-mode .notifications h3,
+body.dark-mode .progress h3,
+body.dark-mode .quickpay h3,
+body.dark-mode .quickpay p {
+    color: #e0e0e0 !important;
+}
+
+/* Dark mode for specific colored text that should stay colored */
+body.dark-mode .transaction-amount.sent,
+body.dark-mode .transaction-amount-hist.sent {
+    color: #ff6b6b !important;
+}
+
+body.dark-mode .transaction-amount.received,
+body.dark-mode .transaction-amount-hist.received {
+    color: #6bff6b !important;
+}
+
+body.dark-mode .event-fee.free {
+    color: #6bff6b !important;
+}
+
+body.dark-mode .event-fee.paid {
+    color: #ffb347 !important;
+}
+
+body.dark-mode .stat-value.exceeded {
+    color: #ff6b6b !important;
+}
+
+/* Force white text on dark backgrounds in buttons */
+body.dark-mode .action-btn,
+body.dark-mode .category-btn,
+body.dark-mode .back-to-dashboard,
+body.dark-mode .enter-button,
+body.dark-mode .confirm-button,
+body.dark-mode .dashboard-button,
+body.dark-mode .profile-action-btn,
+body.dark-mode .profile-edit-btn,
+body.dark-mode .settings-action-btn,
+body.dark-mode .verify-btn,
+body.dark-mode .delete-account-btn,
+body.dark-mode .clear-filter-btn,
+body.dark-mode .scroll-btn,
+body.dark-mode .refund-submit-btn {
+    color: white !important;
+}
+
+/* Fix input text colors */
+body.dark-mode input,
+body.dark-mode textarea,
+body.dark-mode select,
+body.dark-mode .search-box,
+body.dark-mode .amount-input,
+body.dark-mode .message-input,
+body.dark-mode .refund-input,
+body.dark-mode .refund-select,
+body.dark-mode .refund-textarea,
+body.dark-mode .filter-select,
+body.dark-mode .filter-date,
+body.dark-mode .settings-select {
+    color: #e0e0e0 !important;
+    background: #0f0f23 !important;
+}
+
+/* Fix placeholder text */
+body.dark-mode input::placeholder,
+body.dark-mode textarea::placeholder,
+body.dark-mode .search-box::placeholder {
+    color: #6b6b8a !important;
+}
+
+/* Fix specific elements that might have inline styles */
+body.dark-mode [style*="color"],
+body.dark-mode [style*="background"] {
+    color: inherit !important;
+}
+
+/* Keep gradient backgrounds but adjust text */
+body.dark-mode .remaining-balance,
+body.dark-mode .profile-balance-box,
+body.dark-mode .notification-card-header,
+body.dark-mode .date-header {
+    color: white !important;
+}
+
+/* Make sure modal text is readable */
+body.dark-mode .logout-modal-content h2,
+body.dark-mode .logout-modal-content p,
+body.dark-mode .qr-modal-header,
+body.dark-mode .items-modal-header,
+body.dark-mode .confirm-modal-header,
+body.dark-mode .prompt-modal-header {
+    color: white !important;
+}
+
+/* Fix any remaining black text in cards */
+body.dark-mode .transaction-card,
+body.dark-mode .notification-item,
+body.dark-mode .user-item,
+body.dark-mode .settings-item {
+    color: #e0e0e0 !important;
+}
+
+/* Fix the greeting section */
+body.dark-mode .greeting h2,
+body.dark-mode .greeting p,
+body.dark-mode .greeting .date {
+    color: #1f2937 !important;
+}
+
+body.dark-mode .greeting {
+    background: linear-gradient(135deg, #f0f9ff 0%, #f3f4f6 100%);
+}
+
+/* Fix balance boxes background */
+body.dark-mode .balance .box {
+    background: #16213e;
+}
+
+body.dark-mode .balance .box .label,
+body.dark-mode .balance .box .amount {
+    color: #e0e0e0 !important;
+}
+
+/* Fix notifications panel */
+body.dark-mode .notifications {
+    background: #16213e;
+}
+
+body.dark-mode .notifications div[style*="background: #f9fafb"] {
+    background: #0f0f23 !important;
+    color: #e0e0e0 !important;
+}
+
+/* Fix quickpay text */
+body.dark-mode .quickpay {
+    background: linear-gradient(135deg, #4a4a8a 0%, #5a4a9a 100%);
+}
+
+body.dark-mode .quickpay h3,
+body.dark-mode .quickpay p {
+    color: white !important;
+}
+
+/* Fix activity panel */
+body.dark-mode .activity {
+    background: #16213e;
+}
+
+body.dark-mode .activity h3 {
+    color: #e0e0e0 !important;
+}
+
+body.dark-mode .activity div[style*="color: #6b7280"] {
+    color: #a0a0a0 !important;
+}
+
+body.dark-mode .activity span[style*="color: #dc3545"] {
+    color: #ff6b6b !important;
+}
 </style>
 </head>
 
