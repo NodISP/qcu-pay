@@ -367,9 +367,6 @@
                         const data = await response.json();
                         
                         if (response.ok && data.success) {
-console.log("Login response data:", data);
-console.log("User object:", data.user);
-console.log("User ID:", data.user._id);
 
 // Convert ObjectId to string if needed
 const userId = data.user._id.toString ? data.user._id.toString() : data.user._id;
@@ -378,9 +375,6 @@ localStorage.setItem('userId', userId);
 localStorage.setItem('userEmail', data.user.email);
 localStorage.setItem('username', data.user.username);
 localStorage.setItem('userBalance', data.user.balance);
-
-console.log("Saved userId as string:", userId);
-alert("Saved! Your userId is: " + userId);
     
     setMessage(messageDiv, "Login successful! Redirecting...", "success");
                             
