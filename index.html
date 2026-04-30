@@ -2979,6 +2979,351 @@ input:checked + .toggle-slider:before {
     font-weight: bold;
     width: 100%;
 }
+
+    /* ===== DARK MODE STYLES ===== */
+body.dark-mode {
+    background: #1a1a2e;
+}
+
+body.dark-mode .container {
+    background: #1a1a2e;
+}
+
+body.dark-mode .sidebar {
+    background: linear-gradient(180deg, #16213e 0%, #0f3460 100%);
+}
+
+body.dark-mode .sidebar button {
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+}
+
+body.dark-mode .main {
+    background: #1a1a2e;
+}
+
+body.dark-mode .banner {
+    background: linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%);
+}
+
+body.dark-mode .content,
+body.dark-mode .vertical-content,
+body.dark-mode .transfer-content,
+body.dark-mode .confirmation-content,
+body.dark-mode .review-content,
+body.dark-mode .success-content,
+body.dark-mode .events-container,
+body.dark-mode .profile-container,
+body.dark-mode .notifications-container,
+body.dark-mode .settings-container,
+body.dark-mode .refund-container,
+body.dark-mode .history-container {
+    background: #1a1a2e;
+}
+
+body.dark-mode .greeting,
+body.dark-mode .box,
+body.dark-mode .progress,
+body.dark-mode .quickpay,
+body.dark-mode .notifications,
+body.dark-mode .savings,
+body.dark-mode .activity,
+body.dark-mode .balance-section,
+body.dark-mode .savings-section,
+body.dark-mode .categories-section,
+body.dark-mode .search-section,
+body.dark-mode .qr-section,
+body.dark-mode .confirmation-card,
+body.dark-mode .review-card,
+body.dark-mode .success-card,
+body.dark-mode .event-card,
+body.dark-mode .profile-balance-box,
+body.dark-mode .profile-info-box,
+body.dark-mode .profile-bottom-box,
+body.dark-mode .recent-transaction-box,
+body.dark-mode .notifications-tab-box,
+body.dark-mode .settings-options-box,
+body.dark-mode .verification-box,
+body.dark-mode .currency-box,
+body.dark-mode .account-management-box,
+body.dark-mode .refund-form-box,
+body.dark-mode .refund-confirm-card,
+body.dark-mode .date-group,
+body.dark-mode .history-filters {
+    background: #16213e;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+body.dark-mode .greeting h2,
+body.dark-mode .greeting p,
+body.dark-mode .box .label,
+body.dark-mode .box .amount,
+body.dark-mode .progress h3,
+body.dark-mode .notifications h3,
+body.dark-mode .savings h3,
+body.dark-mode .activity h3,
+body.dark-mode .balance-section h2,
+body.dark-mode .savings-section h2,
+body.dark-mode .categories-section h2,
+body.dark-mode .settings-options-box h3,
+body.dark-mode .verification-box h3,
+body.dark-mode .currency-box h3,
+body.dark-mode .account-management-box h3,
+body.dark-mode .refund-form-box h2,
+body.dark-mode .notification-card-body p,
+body.dark-mode .settings-item-label,
+body.dark-mode .settings-item-desc,
+body.dark-mode .profile-info-label,
+body.dark-mode .profile-info-value,
+body.dark-mode .transaction-name,
+body.dark-mode .transaction-details,
+body.dark-mode .notification-title,
+body.dark-mode .notification-desc {
+    color: #e0e0e0;
+}
+
+body.dark-mode .greeting .date,
+body.dark-mode .box .label,
+body.dark-mode .savings .label,
+body.dark-mode .activity div,
+body.dark-mode .transaction-number,
+body.dark-mode .transaction-date,
+body.dark-mode .transaction-message,
+body.dark-mode .notification-time,
+body.dark-mode .refund-input-group label,
+body.dark-mode .file-hint,
+body.dark-mode .currency-note,
+body.dark-mode .delete-note,
+body.dark-mode .verification-note {
+    color: #a0a0a0;
+}
+
+body.dark-mode .search-box,
+body.dark-mode .amount-input,
+body.dark-mode .message-input,
+body.dark-mode .refund-input,
+body.dark-mode .refund-select,
+body.dark-mode .refund-textarea,
+body.dark-mode .filter-select,
+body.dark-mode .filter-date,
+body.dark-mode .settings-select {
+    background: #0f0f23;
+    border-color: #2a2a4a;
+    color: #e0e0e0;
+}
+
+body.dark-mode .search-box:focus,
+body.dark-mode .amount-input:focus,
+body.dark-mode .message-input:focus {
+    border-color: #667eea;
+}
+
+body.dark-mode .user-item,
+body.dark-mode .notification-item,
+body.dark-mode .transaction-item,
+body.dark-mode .settings-item {
+    background: #0f0f23;
+    border-color: #2a2a4a;
+}
+
+body.dark-mode .user-item:hover,
+body.dark-mode .notification-item:hover,
+body.dark-mode .transaction-item:hover,
+body.dark-mode .settings-item:hover {
+    background: #1a1a3e;
+}
+
+body.dark-mode .user-name,
+body.dark-mode .transaction-name-hist,
+body.dark-mode .transaction-message-hist {
+    color: #e0e0e0;
+}
+
+body.dark-mode .user-number,
+body.dark-mode .transaction-number-hist {
+    color: #a0a0a0;
+}
+
+body.dark-mode .remaining-balance {
+    background: linear-gradient(135deg, #4a4a8a 0%, #5a4a9a 100%);
+}
+
+body.dark-mode .savings-box {
+    background: #0f0f23;
+    border-color: #4caf50;
+}
+
+body.dark-mode .category-btn {
+    background: linear-gradient(135deg, #4a4a8a 0%, #5a4a9a 100%);
+}
+
+body.dark-mode .category-btn:nth-child(1) { background: linear-gradient(135deg, #4a4a8a, #5a4a9a); }
+body.dark-mode .category-btn:nth-child(2) { background: linear-gradient(135deg, #8a4a6a, #9a4a7a); }
+body.dark-mode .category-btn:nth-child(3) { background: linear-gradient(135deg, #4a6a8a, #4a7a9a); }
+body.dark-mode .category-btn:nth-child(4) { background: linear-gradient(135deg, #4a8a6a, #4a9a7a); }
+body.dark-mode .category-btn:nth-child(5) { background: linear-gradient(135deg, #8a6a4a, #9a7a4a); }
+body.dark-mode .category-btn:nth-child(6) { background: linear-gradient(135deg, #6a4a8a, #7a4a9a); }
+body.dark-mode .category-btn:nth-child(7) { background: linear-gradient(135deg, #4a8a8a, #4a9a9a); }
+body.dark-mode .category-btn:nth-child(8) { background: linear-gradient(135deg, #8a4a4a, #9a4a4a); }
+
+body.dark-mode .verification-status {
+    background: #2a2a3e;
+    border-left-color: #ffc107;
+}
+
+body.dark-mode .verification-title,
+body.dark-mode .verification-desc {
+    color: #ffd966;
+}
+
+body.dark-mode .notification-stats {
+    background: #2a2a3e;
+}
+
+body.dark-mode .stat-label,
+body.dark-mode .stat-value {
+    color: #ffd966;
+}
+
+body.dark-mode .stat-value.exceeded {
+    color: #ff6b6b;
+}
+
+body.dark-mode .alert-suggestion {
+    background: #1a1a3e;
+    color: #88aaff;
+}
+
+body.dark-mode .transaction-details {
+    background: #0f0f23;
+}
+
+body.dark-mode .detail-row {
+    background: #1a1a3e;
+}
+
+body.dark-mode .detail-label,
+body.dark-mode .detail-value {
+    color: #e0e0e0;
+}
+
+body.dark-mode .refund-confirm-details {
+    background: #0f0f23;
+}
+
+body.dark-mode .confirm-label,
+body.dark-mode .confirm-value {
+    color: #e0e0e0;
+}
+
+body.dark-mode .refund-note {
+    background: #2a2a3e;
+    color: #ffd966;
+}
+
+body.dark-mode .date-header {
+    background: linear-gradient(135deg, #4a4a8a 0%, #5a4a9a 100%);
+}
+
+body.dark-mode .empty-history {
+    background: #16213e;
+}
+
+body.dark-mode .empty-history h3,
+body.dark-mode .empty-history p {
+    color: #a0a0a0;
+}
+
+body.dark-mode .ad-box {
+    background: linear-gradient(135deg, #4a4a8a 0%, #5a4a9a 100%);
+}
+
+body.dark-mode .quickpay {
+    background: linear-gradient(135deg, #4a4a8a 0%, #5a4a9a 100%);
+}
+
+body.dark-mode .action-btn:nth-child(1) {
+    background: linear-gradient(135deg, #5a4a3a 0%, #4a3a2a 100%);
+    color: #e0e0e0;
+}
+
+body.dark-mode .action-btn:nth-child(2) {
+    background: linear-gradient(135deg, #8a3a3a 0%, #6a2a2a 100%);
+}
+
+body.dark-mode .action-btn:nth-child(3) {
+    background: linear-gradient(135deg, #8a3a6a 0%, #6a2a4a 100%);
+}
+
+body.dark-mode .action-btn:nth-child(4) {
+    background: linear-gradient(135deg, #8a6a3a 0%, #6a4a2a 100%);
+    color: #e0e0e0;
+}
+
+body.dark-mode .notification-card {
+    background: #16213e;
+}
+
+body.dark-mode .logout-modal-content {
+    background: #16213e;
+}
+
+body.dark-mode .logout-modal-content h2,
+body.dark-mode .logout-modal-content p {
+    color: #e0e0e0;
+}
+
+body.dark-mode .qr-modal-content,
+body.dark-mode .scan-modal-content,
+body.dark-mode .quickpay-modal-content,
+body.dark-mode .items-modal-content,
+body.dark-mode .confirm-modal-content,
+body.dark-mode .prompt-modal-content {
+    background: #16213e;
+}
+
+body.dark-mode .qr-modal-header,
+body.dark-mode .items-modal-header,
+body.dark-mode .confirm-modal-header,
+body.dark-mode .prompt-modal-header {
+    background: linear-gradient(135deg, #4a4a8a 0%, #5a4a9a 100%);
+}
+
+body.dark-mode .quickpay-card {
+    background: #0f0f23;
+    border-color: #2a2a4a;
+}
+
+body.dark-mode .quickpay-card h3 {
+    color: #667eea;
+}
+
+body.dark-mode .quickpay-item {
+    background: #1a1a3e;
+    border-color: #2a2a4a;
+}
+
+body.dark-mode .quickpay-item-name {
+    color: #e0e0e0;
+}
+
+body.dark-mode .quickpay-item-price {
+    color: #88aaff;
+}
+
+body.dark-mode .prompt-modal-body input,
+body.dark-mode .prompt-modal-body textarea {
+    background: #0f0f23;
+    border-color: #2a2a4a;
+    color: #e0e0e0;
+}
+
+body.dark-mode .settings-action-btn {
+    background: #4a4a8a;
+}
+
+body.dark-mode .settings-action-btn:hover {
+    background: #5a5a9a;
+}
 </style>
 </head>
 
@@ -5209,7 +5554,19 @@ document.getElementById('editInfoBtn')?.addEventListener('click', async () => {
 });
 
 // Settings handlers
-document.getElementById('saveSettingsBtn')?.addEventListener('click', saveSettings);
+document.getElementById('saveSettingsBtn')?.addEventListener('click', () => {
+    const darkModeToggle = document.getElementById('darkModeToggle');
+    if (darkModeToggle) {
+        if (darkModeToggle.checked) {
+            document.body.classList.add('dark-mode');
+            localStorage.setItem('darkMode', 'true');
+        } else {
+            document.body.classList.remove('dark-mode');
+            localStorage.setItem('darkMode', 'false');
+        }
+    }
+    saveSettings();
+});
 document.getElementById('changePasswordBtn')?.addEventListener('click', async () => {
     const currentPassword = await showPrompt("Enter current password:");
     if (!currentPassword) return;
@@ -5339,8 +5696,82 @@ setInterval(updateDateTime, 1000);
 // Add scroll button event listeners
 document.getElementById('scrollLeftBtn')?.addEventListener('click', scrollEventsLeft);
 document.getElementById('scrollRightBtn')?.addEventListener('click', scrollEventsRight);
+// ===== DARK MODE FUNCTIONALITY =====
+function initDarkMode() {
+    const darkModeToggle = document.getElementById('darkModeToggle');
+    if (!darkModeToggle) return;
+    
+    // Check for saved preference
+    const savedDarkMode = localStorage.getItem('darkMode');
+    const isDarkMode = savedDarkMode === 'true';
+    
+    // Apply dark mode if saved
+    if (isDarkMode) {
+        document.body.classList.add('dark-mode');
+        darkModeToggle.checked = true;
+    }
+    
+    // Listen for toggle changes
+    darkModeToggle.addEventListener('change', function(e) {
+        if (e.target.checked) {
+            document.body.classList.add('dark-mode');
+            localStorage.setItem('darkMode', 'true');
+            showToast('Dark mode enabled 🌙', 'success');
+        } else {
+            document.body.classList.remove('dark-mode');
+            localStorage.setItem('darkMode', 'false');
+            showToast('Light mode enabled ☀️', 'success');
+        }
+    });
+}
+
+// Also sync with settings save
+async function saveSettingsWithDarkMode() {
+    const darkModeToggle = document.getElementById('darkModeToggle');
+    const pushToggle = document.getElementById('pushNotificationsToggle');
+    const emailToggle = document.getElementById('emailNotificationsToggle');
+    const langSelect = document.getElementById('languageSelect');
+    
+    try {
+        const settings = {
+            pushNotifications: pushToggle?.checked || false,
+            emailNotifications: emailToggle?.checked || false,
+            darkMode: darkModeToggle?.checked || false,
+            language: langSelect?.value || 'English'
+        };
+        
+        await fetch(`${API_URL}/settings/${currentUserId}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(settings)
+        });
+        
+        showToast('Settings saved!', 'success');
+    } catch (error) {
+        showToast('Error saving settings', 'error');
+    }
+}
+
+// Override the saveSettings function if it exists
+if (typeof saveSettings !== 'undefined') {
+    const originalSaveSettings = saveSettings;
+    window.saveSettings = function() {
+        originalSaveSettings();
+        const darkModeToggle = document.getElementById('darkModeToggle');
+        if (darkModeToggle) {
+            if (darkModeToggle.checked) {
+                document.body.classList.add('dark-mode');
+                localStorage.setItem('darkMode', 'true');
+            } else {
+                document.body.classList.remove('dark-mode');
+                localStorage.setItem('darkMode', 'false');
+            }
+        }
+    };
+}
 
 // Initialize everything
+initDarkMode();
 setupCategoryButtons();
 loadDashboard();
 setupQRCode();
