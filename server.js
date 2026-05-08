@@ -457,6 +457,71 @@ app.post('/api/buy-event-ticket', async (req, res) => {
     }
 });
 
+// ===== DEPOSIT ENDPOINT =====
+app.post('/api/deposit', async (req, res) => {
+    try {
+        const { userId, amount, fullName, email, paymentMethod } = req.body;
+        
+        // Validation
+        if (!userId || !amount || amount <= 0) {
+            return res.status(400).json({ success: false, error: 'Invalid amount' });
+        }
+        
+        const userObjectId = new ObjectId(userId);
+        
+        // Get current user
+        const user = await db.collection('users').findOne({ _id: userObjectId });
+        if (!user) {
+            return res.status(404).json({ success: false, error: 'User not found' });
+        }
+        
+        // Calculate new balance
+        const currentBalance = user.balance || 0;
+        const newBalance = currentBalance + parseFloat(amount);
+        
+        // Update user balance
+        await db.collection('users').updateOne(
+            { _id: userObjectId },
+            { 
+                $set: { balance: newBalance },
+                $push: {
+                    transactions: {
+                        _id: new ObjectId(),
+                        type: 'received',
+                        amount: parseFloat(amount),
+                        otherParty: 'Deposit',
+                        message: `Deposit of ₱${amount} via ${paymentMethod}`,
+                        date: new Date().toISOString().split('T')[0],
+                        time: new Date().toLocaleTimeString(),
+                        category: 'Deposit',
+                        paymentMethod: paymentMethod
+                    }
+                }
+            }
+        );
+        
+        // Create notification
+        await db.collection('notifications').insertOne({
+            userId: userObjectId,
+            title: 'Deposit Successful',
+            message: `₱${amount} has been added to your account via ${paymentMethod}`,
+            type: 'success',
+            time: new Date().toLocaleString(),
+            read: false
+        });
+        
+        res.json({ 
+            success: true, 
+            newBalance: newBalance,
+            message: `Successfully deposited ₱${amount}`
+        });
+        
+    } catch (error) {
+        console.error('Deposit error:', error);
+        res.status(500).json({ success: false, error: 'Deposit failed' });
+    }
+});
+
 // For Vercel serverless
 module.exports = app;
 
