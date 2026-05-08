@@ -3552,6 +3552,164 @@ body.dark-mode .activity div[style*="color: #6b7280"] {
 body.dark-mode .activity span[style*="color: #dc3545"] {
     color: #ff6b6b !important;
 }
+    /* ===== DEPOSIT MODAL STYLES ===== */
+.deposit-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 20003;
+}
+
+.deposit-modal-content {
+    background: white;
+    border-radius: 20px;
+    width: 90%;
+    max-width: 450px;
+    animation: modalSlideIn 0.3s ease;
+    overflow: hidden;
+}
+
+body.dark-mode .deposit-modal-content {
+    background: #16213e;
+}
+
+.deposit-modal-header {
+    background: linear-gradient(135deg, #28a745 0%, #1e7e34 100%);
+    color: white;
+    padding: 20px;
+    text-align: center;
+}
+
+.deposit-modal-header h2 {
+    margin: 0;
+    font-size: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+}
+
+.deposit-modal-body {
+    padding: 25px;
+}
+
+.deposit-input-group {
+    margin-bottom: 20px;
+}
+
+.deposit-input-group label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: bold;
+    color: #333;
+}
+
+body.dark-mode .deposit-input-group label {
+    color: #e0e0e0;
+}
+
+.deposit-input-group input, 
+.deposit-input-group select {
+    width: 100%;
+    padding: 12px;
+    border: 2px solid #ddd;
+    border-radius: 10px;
+    font-size: 14px;
+    transition: border-color 0.3s;
+}
+
+body.dark-mode .deposit-input-group input,
+body.dark-mode .deposit-input-group select {
+    background: #0f0f23;
+    border-color: #2a2a4a;
+    color: #e0e0e0;
+}
+
+.deposit-input-group input:focus,
+.deposit-input-group select:focus {
+    outline: none;
+    border-color: #28a745;
+}
+
+.deposit-amount-input {
+    font-size: 28px !important;
+    font-weight: bold;
+    text-align: center;
+}
+
+.deposit-modal-footer {
+    padding: 20px;
+    display: flex;
+    gap: 12px;
+    border-top: 1px solid #eee;
+}
+
+body.dark-mode .deposit-modal-footer {
+    border-top-color: #2a2a4a;
+}
+
+.deposit-btn-confirm {
+    flex: 1;
+    padding: 12px;
+    background: linear-gradient(135deg, #28a745 0%, #1e7e34 100%);
+    color: white;
+    border: none;
+    border-radius: 10px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: transform 0.2s;
+}
+
+.deposit-btn-confirm:hover {
+    transform: translateY(-2px);
+}
+
+.deposit-btn-cancel {
+    flex: 1;
+    padding: 12px;
+    background: #6c757d;
+    color: white;
+    border: none;
+    border-radius: 10px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: transform 0.2s;
+}
+
+.deposit-btn-cancel:hover {
+    transform: translateY(-2px);
+}
+
+.deposit-demo-note {
+    text-align: center;
+    font-size: 11px;
+    color: #999;
+    margin-top: 15px;
+    padding-top: 10px;
+    border-top: 1px solid #eee;
+}
+
+body.dark-mode .deposit-demo-note {
+    border-top-color: #2a2a4a;
+    color: #666;
+}
+
+/* Hover effect for deposit box */
+.deposit-box {
+    transition: all 0.3s;
+}
+
+.deposit-box:hover {
+    transform: translateY(-5px);
+    background: linear-gradient(135deg, #28a74520, #28a74510) !important;
+    border-left-color: #28a745 !important;
+}
 </style>
 </head>
 
@@ -3600,6 +3758,10 @@ body.dark-mode .activity span[style*="color: #dc3545"] {
                        <div class="box">
                             <div class="label">Net Change Today</div>
                             <div class="amount" id="netChangeToday" style="color: #28a745;">₱0.00</div>
+                        </div>
+                        <div class="box deposit-box" id="depositBox" style="cursor: pointer; border-left-color: #28a745; text-align: center; justify-content: center; align-items: center; background: linear-gradient(135deg, #28a74510, #28a74505);">
+                            <div class="deposit-icon" style="font-size: 48px; margin-bottom: 5px;">➕</div>
+                            <div class="label" style="font-weight: bold;">Deposit Money</div>
                         </div>
                     </div>
                    <div class="progress-section">
@@ -5997,7 +6159,120 @@ if (typeof saveSettings !== 'undefined') {
         }
     };
 }
+// ===== DEPOSIT FUNCTIONALITY (DEMO MODE) =====
+function showDepositModal() {
+    // Create modal
+    const modal = document.createElement('div');
+    modal.className = 'deposit-modal';
+    modal.innerHTML = `
+        <div class="deposit-modal-content">
+            <div class="deposit-modal-header">
+                <h2>➕ Deposit Money</h2>
+                <p style="font-size: 13px; opacity: 0.9; margin-top: 5px;">Add funds to your account</p>
+            </div>
+            <div class="deposit-modal-body">
+                <div class="deposit-input-group">
+                    <label>Full Name *</label>
+                    <input type="text" id="depositFullName" placeholder="Enter your full name" value="Juan Dela Cruz">
+                </div>
+                <div class="deposit-input-group">
+                    <label>Email Address *</label>
+                    <input type="email" id="depositEmail" placeholder="you@example.com" value="student@qcu.edu.ph">
+                </div>
+                <div class="deposit-input-group">
+                    <label>Payment Method *</label>
+                    <select id="depositMethod">
+                        <option value="debit">💳 Debit Card (Visa/Mastercard)</option>
+                        <option value="credit">🏦 Credit Card</option>
+                        <option value="ecash">📱 E-Cash (GCash/Maya)</option>
+                        <option value="bank">🏛️ Bank Transfer</option>
+                    </select>
+                </div>
+                <div class="deposit-input-group">
+                    <label>Amount (₱) *</label>
+                    <input type="number" id="depositAmount" class="deposit-amount-input" placeholder="0.00" value="1000">
+                </div>
+                <div class="deposit-demo-note">
+                    🔧 DEMO MODE: This is a simulation. No real money will be deducted.
+                </div>
+            </div>
+            <div class="deposit-modal-footer">
+                <button class="deposit-btn-cancel" id="depositCancelBtn">Cancel</button>
+                <button class="deposit-btn-confirm" id="depositConfirmBtn">Confirm Deposit →</button>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+    
+    // Close modal function
+    const closeModal = () => modal.remove();
+    
+    document.getElementById('depositCancelBtn')?.addEventListener('click', closeModal);
+    
+    document.getElementById('depositConfirmBtn')?.addEventListener('click', () => {
+        const fullName = document.getElementById('depositFullName')?.value.trim();
+        const email = document.getElementById('depositEmail')?.value.trim();
+        const method = document.getElementById('depositMethod')?.value;
+        const methodText = document.getElementById('depositMethod')?.options[document.getElementById('depositMethod')?.selectedIndex]?.text;
+        const amount = parseFloat(document.getElementById('depositAmount')?.value);
+        
+        // Validation
+        if (!fullName) {
+            showToast('Please enter your full name', 'error');
+            return;
+        }
+        if (!email) {
+            showToast('Please enter your email address', 'error');
+            return;
+        }
+        if (!amount || amount <= 0) {
+            showToast('Please enter a valid amount', 'error');
+            return;
+        }
+        
+        // Get current balance from the page
+        let currentBalance = 25000;
+        const balanceElement = document.querySelector('.balance .box:first-child .amount');
+        if (balanceElement) {
+            const match = balanceElement.textContent.match(/[\d,]+\.?\d*/);
+            if (match) {
+                currentBalance = parseFloat(match[0].replace(/,/g, ''));
+            }
+        }
+        
+        const newBalance = currentBalance + amount;
+        
+        // Update all balance displays
+        const newBalanceFormatted = `₱${newBalance.toLocaleString(undefined, {minimumFractionDigits: 2})}`;
+        document.querySelectorAll('.balance .box:first-child .amount, .profile-balance-amount, .remaining-balance .amount, #payBillsCurrentBalance').forEach(el => {
+            if (el) el.textContent = newBalanceFormatted;
+        });
+        
+        // Also update the specific current balance display
+        const currentBalanceDisplay = document.querySelector('.balance .box:first-child .amount');
+        if (currentBalanceDisplay) currentBalanceDisplay.textContent = newBalanceFormatted;
+        
+        // Show success message with deposit details
+        showToast(`✅ Deposit Successful!\n\n₱${amount.toLocaleString()} added via ${methodText}\nNew Balance: ₱${newBalance.toLocaleString()}`, 'success');
+        
+        // Close modal
+        closeModal();
+        
+        // Show additional demo note
+        setTimeout(() => {
+            showToast('💰 This is a demo simulation. Real payment processing coming soon!', 'info', 4000);
+        }, 500);
+    });
+    
+    // Close on background click
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) closeModal();
+    });
+}
 
+// Add deposit box click listener
+document.getElementById('depositBox')?.addEventListener('click', showDepositModal);
 // Initialize everything
 initDarkMode();
 setupCategoryButtons();
