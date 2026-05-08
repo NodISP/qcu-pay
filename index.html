@@ -4571,7 +4571,7 @@ async function loadNotifications() {
         const sidebarNotification = document.querySelector('.notifications');
         if (sidebarNotification) {
             if (notifications && notifications.length > 0) {
-                let html = '<h3>🔔 Recent Alerts</h3>';
+                let html = '<h3> Recent Alerts</h3>';
                 notifications.slice(0, 3).forEach(n => {
                     html += `
                         <div style="padding: 10px; margin-bottom: 8px; background: ${n.type === 'critical' ? '#ffebee' : '#fff3cd'}; border-radius: 8px; border-left: 4px solid ${n.type === 'critical' ? '#dc3545' : '#ffc107'};">
@@ -4881,7 +4881,7 @@ async function loadDashboard() {
         const activityDiv = document.querySelector('.activity');
         if (activityDiv && transactions.length) {
             const recent = transactions.slice(0, 5);
-            let html = '<h3>📊 Recent Activity</h3><div style="font-size: 13px;">';
+            let html = '<h3> Recent Activity</h3><div style="font-size: 13px;">';
             recent.forEach(t => {
     const amountValue = t.amount || 0;
     const amount = t.type === 'sent' ? `-₱${amountValue.toLocaleString()}` : `+₱${amountValue.toLocaleString()}`;
