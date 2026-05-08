@@ -6159,7 +6159,7 @@ if (typeof saveSettings !== 'undefined') {
         }
     };
 }
-// ===== DEPOSIT FUNCTIONALITY (DEMO MODE) =====
+// ===== DEPOSIT FUNCTIONALITY (WITH DATABASE) =====
 function showDepositModal() {
     // Create modal
     const modal = document.createElement('div');
@@ -6173,19 +6173,19 @@ function showDepositModal() {
             <div class="deposit-modal-body">
                 <div class="deposit-input-group">
                     <label>Full Name *</label>
-                    <input type="text" id="depositFullName" placeholder="Enter your full name" value="Juan Dela Cruz">
+                    <input type="text" id="depositFullName" placeholder="Enter your full name" value="${localStorage.getItem('username') || 'Student'}">
                 </div>
                 <div class="deposit-input-group">
                     <label>Email Address *</label>
-                    <input type="email" id="depositEmail" placeholder="you@example.com" value="student@qcu.edu.ph">
+                    <input type="email" id="depositEmail" placeholder="you@example.com" value="${localStorage.getItem('userEmail') || 'student@qcu.edu.ph'}">
                 </div>
                 <div class="deposit-input-group">
                     <label>Payment Method *</label>
                     <select id="depositMethod">
-                        <option value="debit">💳 Debit Card (Visa/Mastercard)</option>
-                        <option value="credit">🏦 Credit Card</option>
-                        <option value="ecash">📱 E-Cash (GCash/Maya)</option>
-                        <option value="bank">🏛️ Bank Transfer</option>
+                        <option value="Debit Card">💳 Debit Card (Visa/Mastercard)</option>
+                        <option value="Credit Card">🏦 Credit Card</option>
+                        <option value="E-Cash">📱 E-Cash (GCash/Maya)</option>
+                        <option value="Bank Transfer">🏛️ Bank Transfer</option>
                     </select>
                 </div>
                 <div class="deposit-input-group">
@@ -6193,7 +6193,7 @@ function showDepositModal() {
                     <input type="number" id="depositAmount" class="deposit-amount-input" placeholder="0.00" value="1000">
                 </div>
                 <div class="deposit-demo-note">
-                    🔧 DEMO MODE: This is a simulation. No real money will be deducted.
+                    💳 Secure payment processing. Funds will be added to your balance.
                 </div>
             </div>
             <div class="deposit-modal-footer">
@@ -6210,12 +6210,14 @@ function showDepositModal() {
     
     document.getElementById('depositCancelBtn')?.addEventListener('click', closeModal);
     
-    document.getElementById('depositConfirmBtn')?.addEventListener('click', () => {
+    document.getElementById('depositConfirmBtn')?.addEventListener('click', async () => {
         const fullName = document.getElementById('depositFullName')?.value.trim();
         const email = document.getElementById('depositEmail')?.value.trim();
-        const method = document.getElementById('depositMethod')?.value;
-        const methodText = document.getElementById('depositMethod')?.options[document.getElementById('depositMethod')?.selectedIndex]?.text;
+        const methodSelect = document.getElementById('depositMethod');
+        const method = methodSelect?.value;
+        const methodText = methodSelect?.options[methodSelect.selectedIndex]?.text;
         const amount = parseFloat(document.getElementById('depositAmount')?.value);
+        const confirmBtn = document.getElementById('depositConfirmBtn');
         
         // Validation
         if (!fullName) {
@@ -6231,38 +6233,59 @@ function showDepositModal() {
             return;
         }
         
-        // Get current balance from the page
-        let currentBalance = 25000;
-        const balanceElement = document.querySelector('.balance .box:first-child .amount');
-        if (balanceElement) {
-            const match = balanceElement.textContent.match(/[\d,]+\.?\d*/);
-            if (match) {
-                currentBalance = parseFloat(match[0].replace(/,/g, ''));
-            }
+        // Disable button during processing
+        if (confirmBtn) {
+            confirmBtn.disabled = true;
+            confirmBtn.textContent = 'Processing...';
         }
         
-        const newBalance = currentBalance + amount;
-        
-        // Update all balance displays
-        const newBalanceFormatted = `₱${newBalance.toLocaleString(undefined, {minimumFractionDigits: 2})}`;
-        document.querySelectorAll('.balance .box:first-child .amount, .profile-balance-amount, .remaining-balance .amount, #payBillsCurrentBalance').forEach(el => {
-            if (el) el.textContent = newBalanceFormatted;
-        });
-        
-        // Also update the specific current balance display
-        const currentBalanceDisplay = document.querySelector('.balance .box:first-child .amount');
-        if (currentBalanceDisplay) currentBalanceDisplay.textContent = newBalanceFormatted;
-        
-        // Show success message with deposit details
-        showToast(`✅ Deposit Successful!\n\n₱${amount.toLocaleString()} added via ${methodText}\nNew Balance: ₱${newBalance.toLocaleString()}`, 'success');
-        
-        // Close modal
-        closeModal();
-        
-        // Show additional demo note
-        setTimeout(() => {
-            showToast('💰 This is a demo simulation. Real payment processing coming soon!', 'info', 4000);
-        }, 500);
+        try {
+            // Call backend API
+            const response = await fetch(`${API_URL}/deposit`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    userId: currentUserId,
+                    amount: amount,
+                    fullName: fullName,
+                    email: email,
+                    paymentMethod: methodText
+                })
+            });
+            
+            const data = await response.json();
+            
+            if (data.success) {
+                // Update all balance displays
+                const newBalanceFormatted = `₱${data.newBalance.toLocaleString(undefined, {minimumFractionDigits: 2})}`;
+                document.querySelectorAll('.balance .box:first-child .amount, .profile-balance-amount, .remaining-balance .amount, #payBillsCurrentBalance').forEach(el => {
+                    if (el) el.textContent = newBalanceFormatted;
+                });
+                
+                // Also update the specific current balance display
+                const currentBalanceDisplay = document.querySelector('.balance .box:first-child .amount');
+                if (currentBalanceDisplay) currentBalanceDisplay.textContent = newBalanceFormatted;
+                
+                // Show success message
+                showToast(`✅ Deposit Successful!\n\n₱${amount.toLocaleString()} added via ${methodText}\nNew Balance: ₱${data.newBalance.toLocaleString()}`, 'success');
+                
+                // Reload dashboard data
+                await loadDashboard();
+                
+                // Close modal
+                closeModal();
+            } else {
+                showToast(data.error || 'Deposit failed. Please try again.', 'error');
+            }
+        } catch (error) {
+            console.error('Deposit error:', error);
+            showToast('Cannot connect to server. Please try again.', 'error');
+        } finally {
+            if (confirmBtn) {
+                confirmBtn.disabled = false;
+                confirmBtn.textContent = 'Confirm Deposit →';
+            }
+        }
     });
     
     // Close on background click
